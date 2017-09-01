@@ -1,0 +1,29 @@
+{
+	"build_systems":
+	[
+		{
+			"shell_cmd":"tsc",
+			"name": "typescript"
+		},
+		{
+			"shell_cmd":"grunt screeps",
+			"name": "grunt"
+		}
+	],
+	"folders":
+	[
+		{
+			"name": "src",
+			"path": "./src/"
+		},
+		{
+			"name": "config",
+			"path": ".",
+			"folder_exclude_patterns":["*"]
+		}
+	],
+	"settings":
+	{
+		"tab_size": 2
+	}
+}

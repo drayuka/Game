@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+      "allowJs": true,
+      "module": "commonjs",
+      "target": "es6",
+      "noImplicitAny": true,
+      "sourceMap": false,
+      "outDir": "./dist",
+      "noEmitOnError": true,
+      "allowUnreachableCode": true,
+      "strict": true
+    },
+    "include": [
+      "./src/*",
+      "./typings/**/*.d.ts"
+    ]
+}
