@@ -1,5 +1,0 @@
-{
-  "globalDependencies": {
-    "screeps": "github:screepers/typed-screeps/dist/screeps.d.ts#master"
-  }
-}
