@@ -14,6 +14,16 @@ var patches : Patches = {
 		},
 		version: 'Mining'
 	},
+	killAllCreeps: {
+		patch: function () {
+			_.forEach(Game.creeps, function (creep) {
+				creep.suicide();
+			});
+			delete Memory.creeps;
+			
+		},
+		version: 'Mining'
+	},
 	addRooms: {
 		patch: function () {
 			Memory.rooms = {};
@@ -31,14 +41,20 @@ var patches : Patches = {
       });
 
       //reserved rooms are reserved by a claim creep and mined
-      let reservedRooms = 
+      let roomAllocation = 
       {'E36S12': ['E36S11','E35S11','E36S13'],
        'E37S12': ['E37S11','E37S13','E38S13','E39S13'],
        'E38S11': ['E38S12','E39S12','E39S11'],
        'E34S12': ['E34S11','E34S13','E33S13','E35S12'],
-       'E33S11': ['E33S12','E32S12','E32S11','E31S11']};
-      _.forEach(reservedRooms, function (rooms: string[], roomName: string) {
-      	
+       'E33S11': ['E33S12','E32S11','E31S11'],
+     	 'E31S12': ['E32S12','E32S13','E31S13'],
+     	 'E37S14': ['E38S14','E39S14','E38S15'],
+     	 'E39S16': ['E39S15']};
+      _.forEach(roomAllocation, function (reservedRooms: string[], claimedRoomName: string) {
+      	global.jobs.bootstrap.claimRoom(claimedRoomName);
+      	_.forEach(reservedRooms, function (reservedRoom: string) {
+      		global.jobs.bootstrap.reserveRoom(reservedRoom, claimedRoomName);
+      	})
       });
 		},
 		version: 'Mining'
