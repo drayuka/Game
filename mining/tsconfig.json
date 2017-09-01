@@ -12,6 +12,6 @@
     },
     "include": [
       "./src/*",
-      "./typings/**/*.d.ts"
+      "./node_modules/@types/**/*.d.ts"
     ]
 }
