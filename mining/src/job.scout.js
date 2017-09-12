@@ -11,7 +11,7 @@ var goal = require('goal');
 var job = require('job');
 var creep = require('creep');
 // can be called with just name, or with target as well
-class scout extends job {
+class scout extends JobClass {
     execute() {
         var self = this;
         self.reassessScoutingSites();

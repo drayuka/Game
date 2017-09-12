@@ -11,7 +11,7 @@ var goal = require('goal');
 var utils = require('utils');
 var creep = require('creep');
 var build = require('build');
-class mining extends job {
+class mining extends JobClass {
     execute() {
         var self = this;
         self.updateBuilds();

@@ -16,6 +16,7 @@ class JobClass {
     memory: any;
     protected _goals: GoalList;
     protected _creeps: CreepList;
+    protected pareintClaim: undefined | string;
     execute () {
         throw new Error('must implement an execute function');
     }

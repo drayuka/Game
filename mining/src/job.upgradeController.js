@@ -9,7 +9,7 @@
 var job = require('job');
 var goal = require('goal');
 var utils = require('utils');
-class upgradeController extends job {
+class upgradeController extends JobClass {
     execute() {
         var self = this;
         self.updateWaits();

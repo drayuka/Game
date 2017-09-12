@@ -10,7 +10,7 @@ var job = require('job');
 var goal = require('goal');
 var utils = require('utils');
 var creep = require('creep');
-class harvest extends job {
+class harvest extends JobClass {
     execute() {
         var self = this;
         self.updateStorages();

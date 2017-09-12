@@ -11,7 +11,7 @@ var utils = require('utils');
 var goal = require('goal');
 var job = require('job');
 var creep = require('creep');
-class roomworker extends job {
+class roomworker extends JobClass {
     execute () {
         var self = this;
         self.deleteGoals();

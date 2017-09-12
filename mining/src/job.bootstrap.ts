@@ -34,7 +34,7 @@ interface roomDirectory {
     }
 }
 // can be called with just name, or with target as well
-class bootstrap extends job {
+class bootstrapJob extends JobClass {
     _reserveRoomToClaimRoom : {[key: string] : string} | undefined;
     execute () {
         var self = this;

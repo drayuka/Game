@@ -9,7 +9,7 @@
 var job = require('job');
 var goal = require('goal');
 var utils = require('utils');
-class logistics extends job {
+class logistics extends JobClass {
     execute() {
         var self = this;
         self.updateRoutes();

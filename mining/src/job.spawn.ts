@@ -158,7 +158,7 @@ var creepTypes : {[key: string]: creepType} = {
     }
 };
 //this is a job for ease of use, it doesn't really make sense for spawn to have goals;
-class SpawnJob extends JobClass {
+class spawnJob extends JobClass {
     execute() {
         var self = this;
         self.updateSpawns();

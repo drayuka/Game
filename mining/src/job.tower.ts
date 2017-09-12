@@ -4,7 +4,7 @@ interface creepRoomList {
 	[key: string]: Creep[]
 }
 
-class spawn extends JobClass {
+class towerJob extends JobClass {
 	enemyCreeps : creepRoomList;
 	execute() {
 		var self = this;
@@ -35,7 +35,7 @@ class spawn extends JobClass {
 			if(!self.enemyCreeps[room.name]) {
 				return true;
 			}
-			let towers : StructureTower[] = <Array<_HasRoomPosition>>room.find(FIND_MY_STRUCTURES, {filter: function(struct: OwnedStructure) {
+			let towers = <Array<StructureTower>>room.find(FIND_MY_STRUCTURES, {filter: function(struct: OwnedStructure) {
 				if(struct.structureType == STRUCTURE_TOWER) {
 					return true;
 				}
