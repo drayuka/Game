@@ -177,8 +177,19 @@ class bootstrapJob extends JobClass {
         });
         return self._reserveRoomToClaimRoom;
     }
-    runRooms() {
+    createRoomJobs() {
         var self = this;
+    }
+    initializeRooms() {
+        var self = this;
+        _.forEach(self.claimedRooms, function (claimedRoom, claimedRoomName) {
+            _.forEach(global.jobClasses, function (jobClass, jobName) {
+                new jobClass(jobName);
+            });
+        });
+    }
+    runRooms() {
+
     }
     checkRooms() {
         var self = this;
