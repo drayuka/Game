@@ -1,7 +1,5 @@
 //role enumeration in order of priority roles should be sorted at creep creation
 //types have collections of roles
-var creepClass = require('creep');
-var buildClass = require('build');
 
 global.Version = 'Mining';
 
