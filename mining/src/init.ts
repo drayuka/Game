@@ -1,20 +1,5 @@
-interface JobDefinitionList {
-    upgrade : upgradeControllerJob,
-    spawn : spawnJob,
-    harvest : harvestJob,
-    logistics : logisticsJob,
-    bootstrap : bootstrapJob,
-    claim : claimJob,
-    scout : scoutJob,
-    reserve : reserveJob,
-    roomworker : roomworkerJob,
-    links : linksJob,
-    protector : protectorJob,
-    mining : miningJob,
-    tower : towerJob
-}
 
-const jobs: JobDefinitionList = {
+var jobs: JobDefinitionList = {
     upgrade: require('job.upgradeController'),
     spawn: <spawnJob>require('job.spawn'),
     harvest: require('job.harvest'),
@@ -34,6 +19,8 @@ global.goal = require('goal');
 
 
 var initializeSimRoom = function () {
+    console.log('cant initalize sim room');
+    return;
     if(_.keys(Game.creeps).length == 1) {
         var firstCreep = Game.creeps[_.keys(Game.creeps)[0]];
         if(!firstCreep.memory.jobName && global.jobs.roomworker.memory.roomAssignments && global.jobs.roomworker.memory.roomAssignments['sim']) {
@@ -59,27 +46,33 @@ var initialize = function () {
             roomLevel: Game.rooms['sim'].controller.level
         };
     }
-    var creepObjs = _.map(Game.creeps, function (creep) {
-        try {
-            var newCreep = new creepClass(creep);
-            newCreep.maintain();
-            return newCreep;
-        } catch (e) {
-            console.log('had the following error when spinning up creeps:');
-            console.log(e.stack);
-            debugger;        
-        }
-    });
-    global.creeps = _.indexBy(creepObjs, function (creepobj) {
-        return creepobj.name;
-    });
-
+    // if we haven't created our new creep objects, create them, otherwise, do not.
+    if(!global.creeps) {
+        var creepObjs = _.map(Game.creeps, function (creep) {
+            try {
+                var newCreep = new CreepClass(creep);
+                return newCreep;
+            } catch (e) {
+                console.log('had the following error when spinning up creeps:');
+                console.log(e.stack);
+                debugger;        
+            }
+        });
+        global.creeps = _.indexBy(creepObjs, function (creepobj) {
+            return creepobj.name;
+        });
+    }
+    // maintain the creeps
+    _.forEach(global.creeps, function (creepobj) {
+        creepobj.maintain;
+    })
+    
     if(!global.jobs) {
         global.jobs = {};
     }
-    for (var jobName of jobs) {
+    for (var jobName of global.jobClasses) {
         try {
-            var job = jobs[jobName];
+            var job = global.jobClasses[jobName];
             global.jobs[jobName] = new job(jobName);
         } catch (e) {
             console.log('had the following error when instatiating the following job: ' + jobName);
@@ -87,20 +80,6 @@ var initialize = function () {
             debugger;
         }
     }
-    var builds = _.map(Memory.builds, function (meta, id) {
-        try {
-            var build = new buildClass(id, meta);
-            build.maintainBuild();
-            return build;
-        } catch (e) {
-            console.log('had the following error when checking on builds:');
-            console.log(e.stack);
-            debugger;
-        }
-    });
-    global.builds = _.indexBy(builds, function (build) {
-        return build.id;
-    });
     if(Game.rooms['sim']) {
         initializeSimRoom();
     }

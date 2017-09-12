@@ -27,27 +27,39 @@ interface openPositionsOptions {
 interface oldCreepList {
 	[key: string]: Creep
 }
-
 interface JobList {
 	[key: string]: JobClass
 }
 interface CreepList {
 	[key: string]: CreepClass
 }
-interface BuildList {
-	[key: string]: BuildClass
-}
 interface GoalList {
 	[key: string]: GoalClass
 }
+
+interface JobDefinitionList {
+    upgrade : upgradeControllerJob,
+    spawn : spawnJob,
+    harvest : harvestJob,
+    logistics : logisticsJob,
+    bootstrap : bootstrapJob,
+    claim : claimJob,
+    scout : scoutJob,
+    reserve : reserveJob,
+    roomworker : roomworkerJob,
+    links : linksJob,
+    protector : protectorJob,
+    mining : miningJob,
+    tower : towerJob
+}
+
 namespace NodeJS {
 	export interface Global {
 		Version: string,
 		reservedRooms: string[],
 		allRooms: string[],
-		jobs: JobList,
+		jobClasses: JobDefinitionList,
 		creeps: CreepList,
-		builds: BuildList
 		utils: typeof Utils,
 		goal: typeof GoalClass
 	}
