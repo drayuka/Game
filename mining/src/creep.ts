@@ -106,10 +106,10 @@ class CreepClass extends Creep {
         }
         return 0;
     }
-    set job (job: string | JobClass) {
+    set job (job : JobClass) {
         var self = this;
         if(typeof job == 'string') {
-            self._job = global.jobs[job];
+            self._job = global.jobs[<string>job];
             self.memory.jobName = job;
         } else {
             self._job = job;
