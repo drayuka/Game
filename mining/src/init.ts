@@ -1,22 +1,33 @@
 interface JobDefinitionList {
-    [key: string]: JobClass;
+    upgrade : upgradeControllerJob,
+    spawn : spawnJob,
+    harvest : harvestJob,
+    logistics : logisticsJob,
+    bootstrap : bootstrapJob,
+    claim : claimJob,
+    scout : scoutJob,
+    reserve : reserveJob,
+    roomworker : roomworkerJob,
+    links : linksJob,
+    protector : protectorJob,
+    mining : miningJob,
+    tower : towerJob
 }
 
 const jobs: JobDefinitionList = {
     upgrade: require('job.upgradeController'),
-    spawn: require('job.spawn'),
+    spawn: <spawnJob>require('job.spawn'),
     harvest: require('job.harvest'),
     logistics: require('job.logistics'),
-    bootstrap: require('job.bootstrap'),
+    bootstrap: <bootstrapJob>require('job.bootstrap'),
     claim: require('job.claim'),
     scout: require('job.scout'),
     reserve: require('job.reserve'),
     roomworker: require('job.roomworker'),
-    evacuator: require('job.evacuator'),
     links: require('job.links'),
-    protector: require('job.protector'),
+    protector: <protectorJob>require('job.protector'),
     mining: require('job.mining'),
-    tower: require('job.tower')
+    tower: <towerJob>require('job.tower')
 }
 global.utils = require('utils');
 global.goal = require('goal');
