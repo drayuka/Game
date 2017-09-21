@@ -8,21 +8,37 @@ var init = require('init');
 
 //we should only ever run through oneTimePatch when we have to 
 //re-build code(which happens on a commit)
-oneTimePatchRunner();
+try {
+    oneTimePatchRunner(false);
+} catch (e) {
+    console.log('one time patch runner pre init had the following error: ');
+    console.log(e.stack);
+    debugger;
+}
 
 module.exports.loop = function () {
     //Error.stackTraceLimit = Infinity;
-    init();
-    //run jobs
-    _.forEach(global.jobs, function (job: JobClass, name: string) {
-        try {
-            job.execute();
-        } catch (e) {
-            console.log('job ' + name +' had the following error:');
-            console.log(e.stack);
-            debugger;
-        }
-    });
+    try {
+        init();
+    } catch(e) {
+        console.log('init had the following error:');
+        console.log(e.stack);
+        debugger;
+    }
+    try {
+        oneTimePatchRunner(true);
+    } catch(e) {
+        console.log('one time patch runner post init had the following error: ');
+        console.log(e.stack);
+        debugger;
+    }
+    try{
+        global.bootstrap.runRooms();
+    } catch(e) {
+        console.log('global bootstrap job had the following error: ');
+        console.log(e.stack);
+        debugger;
+    }
     _.forEach(Memory.creeps, function (creep: any ,name: string) {
         if(!Game.creeps[name]) {
             delete Memory.creeps[name];

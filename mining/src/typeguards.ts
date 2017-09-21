@@ -38,19 +38,19 @@ interface GoalList {
 }
 
 interface JobDefinitionList {
-    upgrade : upgradeControllerJob,
-    spawn : spawnJob,
-    harvest : harvestJob,
-    logistics : logisticsJob,
-    bootstrap : bootstrapJob,
-    claim : claimJob,
-    scout : scoutJob,
-    reserve : reserveJob,
-    roomworker : roomworkerJob,
-    links : linksJob,
-    protector : protectorJob,
-    mining : miningJob,
-    tower : towerJob
+    upgrade : typeof upgradeControllerJob,
+    spawn : typeof spawnJob,
+    harvest : typeof harvestJob,
+    logistics : typeof ogisticsJob,
+    bootstrap : typeof bootstrapJob,
+    claim : typeof claimJob,
+    scout : typeof scoutJob,
+    reserve : typeof reserveJob,
+    roomworker : typeof roomworkerJob,
+    links : typeof linksJob,
+    protector : typeof protectorJob,
+    mining : typeof miningJob,
+    tower : typeof towerJob
 }
 
 namespace NodeJS {
@@ -59,6 +59,7 @@ namespace NodeJS {
 		reservedRooms: string[],
 		allRooms: string[],
 		jobClasses: JobDefinitionList,
+		bootstrap: bootstrapJob,
 		creeps: CreepList,
 		utils: typeof Utils,
 		goal: typeof GoalClass

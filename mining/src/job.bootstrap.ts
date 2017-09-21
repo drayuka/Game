@@ -12,6 +12,7 @@ var job = require('job');
 
 interface roomMemory {
     upgrading : boolean,
+    claimed : boolean,
     claiming : boolean,
     linking : boolean,
     mining : boolean,
@@ -22,6 +23,20 @@ interface roomMemory {
     logistics : boolean,
     protector : boolean,
 }
+interface JobList {
+    upgrade : upgradeControllerJob,
+    spawn : spawnJob,
+    harvest : harvestJob,
+    logistics : logisticsJob,
+    claim : claimJob,
+    scout : scoutJob,
+    reserve : reserveJob,
+    roomworker : roomworkerJob,
+    links : linksJob,
+    protector : protectorJob,
+    mining : miningJob,
+    tower : towerJob
+}
 
 interface roomDirectory {
     [key: string] : {
@@ -30,21 +45,24 @@ interface roomDirectory {
             [key : string] : {
                 roomMemory : roomMemory
             }
-        }
+        },
+        jobs : JobList
     }
 }
 // can be called with just name, or with target as well
-class bootstrapJob extends JobClass {
+class bootstrapJob {
     _reserveRoomToClaimRoom : {[key: string] : string} | undefined;
-    execute () {
-        var self = this;
-        self.checkRooms();
-        self.scanForRooms();
+    memory: any;
+    constructor() {
+        if(!Memory.jobs.bootstrap) {
+            Memory.jobs.bootstrap = {};
+        }
+        self.memory = Memory.jobs.bootstrap;
     }
     get claimedRooms () : roomDirectory {
         var self = this;
         if(!self.memory.claimedRooms) {
-            self.memory.claimedRooms = [];
+            self.memory.claimedRooms = {};
         }
         return self.memory.claimedRooms;
     }
@@ -67,18 +85,25 @@ class bootstrapJob extends JobClass {
         if(self.claimedRooms[claimedRoomName]) {
             throw new Error('room ' + claimedRoomName + ' is already claimed');
         }
-        self.claimedRooms[claimedRoomName] = {roomMemory: {
-            upgrading : false,
-            claiming : false,
-            linking : false,
-            mining : false,
-            roomworker : false,
-            harvest : false,
-            scout : false,
-            reserve : false,
-            logistics : false,
-            protector : false
-        }, reservedRooms: {}};
+        self.claimedRooms[claimedRoomName] = {
+            roomMemory: {
+                upgrading : false,
+                claiming : false,
+                claimed : false,
+                linking : false,
+                mining : false,
+                roomworker : false,
+                harvest : false,
+                scout : false,
+                reserve : false,
+                logistics : false,
+                protector : false
+            }, 
+            reservedRooms: {}, 
+            jobs: <JobList>{}
+        };
+        self.initalizeRoom(self.claimedRooms[claimedRoomName]);
+        
     }
     //reserve a room for use by a claimed room, this means that the claimed room should spawn everything
     //claimed rooms without spawns cannot reserve any rooms
@@ -106,6 +131,7 @@ class bootstrapJob extends JobClass {
         self.claimedRooms[claimedRoomName].reservedRooms[reservedRoomName] = {roomMemory : {
             upgrading : false,
             claiming : false,
+            claimed : false,
             linking : false,
             mining : false,
             roomworker : false,
@@ -155,7 +181,9 @@ class bootstrapJob extends JobClass {
         Game.rooms[claimedRoomName].controller.unclaim();
         delete self.claimedRooms[claimedRoomName];
     }
+    //TODO: FIX AS THIS DOES NOT CURRENTLY WORK
     unReserveRoom (reservedRoomName : string) {
+        throw new Error('unreserve room is currently non functional');
         var self = this;
         if(!_.find(self.claimedRooms, function(room, roomName) {
             return roomName == reservedRoomName;
@@ -177,22 +205,55 @@ class bootstrapJob extends JobClass {
         });
         return self._reserveRoomToClaimRoom;
     }
-    createRoomJobs() {
-        var self = this;
-    }
     initializeRooms() {
         var self = this;
         _.forEach(self.claimedRooms, function (claimedRoom, claimedRoomName) {
+            initalizeRoom(claimedRoom);
+        });
+    }
+    initalizeRoom(claimedRoom) {
+        if(!claimedRoom.jobs) {
+            claimedRoom.jobs = {};
             _.forEach(global.jobClasses, function (jobClass, jobName) {
-                new jobClass(jobName);
+                try {
+                    claimedRoom.jobs[jobName] = new jobClass(jobName, claimedRoomName);
+                } catch (e) {
+                    console.log('job ' + jobName + ' had the following error on instantiation:');
+                    console.log(e.stack);
+                    debugger;
+                }
+            });
+        }
+    }
+    runRooms() {
+        var self = this;
+        self.checkRooms();
+        _.forEach(self.claimedRooms, function (claimedRoom, claimedRoomName) {
+            _.forEach(claimedRoom.jobs, function (job, jobName) {
+                try {
+                    job.execute();
+                } catch (e) {
+                    console.log('job ' + jobName + ' had the following error when executing:');
+                    console.log(e.stack);
+                    debugger;
+                }
             });
         });
     }
-    runRooms() {
-
+    checkClaimedRoom(roomName, roomMemory) {
+        var self = this;
+        if(!Game.rooms[roomName]) {
+            console.log('cant check claimed room ' + roomName + ' as it is not visible');
+        }
+        var room = Game.rooms[roomName];
     }
     checkRooms() {
         var self = this;
+
+        _.forEach(self.claimedRooms, function (claimedRoom, claimedRoomName) {
+            claimedRoomMemory = claimedRoom.roomMemory;
+            checkClaimedRoom(claimedRoomName, claimedRoomMemory);
+        });
         if(!self.memory.rooms) {
             self.memory.rooms = {};
         }

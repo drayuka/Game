@@ -16,25 +16,23 @@ class JobClass {
     memory: any;
     protected _goals: GoalList;
     protected _creeps: CreepList;
-    protected pareintClaim: undefined | string;
+    protected parentClaim: string;
     execute () {
         throw new Error('must implement an execute function');
     }
-    constructor(name: string) {
+    constructor(name: string, parentClaimRoom: string) {
         var self = this;
         self.name = name;
+        self.parentClaim = parentClaimRoom;
         self.initialize();
         self._maintain();
     }
     initialize() {
         var self = this;
-        if (!Memory.jobs[self.name]) {
-            Memory.jobs[self.name] = {
-                creeps: [],
-                goals: {}
-            };
+        if(!Memory.jobs[self.parentClaim] || !Memory.jobs[self.parentClaim][self.name]) {
+            _.set(Memory.jobs, self.parentClaim + '.' + self.name, {creeps: [], goals: {}});
         }
-        self.memory = Memory.jobs[self.name];
+        self.memory = Memory.jobs[self.parentClaim][self.name];
     }
     protected _maintain() {
         var self = this;
@@ -232,7 +230,7 @@ class JobClass {
                 return 1;
             }
             return 0;
-        })
+        });
     }
 }
 module.exports = JobClass;

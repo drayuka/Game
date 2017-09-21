@@ -17,34 +17,9 @@ var jobs: JobDefinitionList = {
 global.utils = require('utils');
 global.goal = require('goal');
 
-
-var initializeSimRoom = function () {
-    console.log('cant initalize sim room');
-    return;
-    if(_.keys(Game.creeps).length == 1) {
-        var firstCreep = Game.creeps[_.keys(Game.creeps)[0]];
-        if(!firstCreep.memory.jobName && global.jobs.roomworker.memory.roomAssignments && global.jobs.roomworker.memory.roomAssignments['sim']) {
-            firstCreep.memory.goal = 'sim'; 
-            global.jobs.roomworker.addCreep(firstCreep.name);
-        }
-    }
-}
-
 var initialize = function () {
     if(!Memory.jobs) {
         Memory.jobs = {};
-    }
-    if (!Memory.rooms) {
-        Memory.rooms = {};
-    }
-    if(!Memory.jobs || typeof Memory.jobs != 'object') {
-        Memory.jobs = {};
-    }
-    if(Game.rooms['sim'] !== undefined && Game.rooms['sim'].controller !== undefined) {
-        Memory.rooms['sim'] = {
-            status: 'claimed',
-            roomLevel: Game.rooms['sim'].controller.level
-        };
     }
     // if we haven't created our new creep objects, create them, otherwise, do not.
     if(!global.creeps) {
@@ -64,23 +39,15 @@ var initialize = function () {
     }
     // maintain the creeps
     _.forEach(global.creeps, function (creepobj) {
-        creepobj.maintain;
-    })
-    
-    if(!global.jobs) {
-        global.jobs = {};
-    }
-    for (var jobName of global.jobClasses) {
+        creepobj.maintain();
+    });
+    if(!global.bootstrap) {
         try {
-            var job = global.jobClasses[jobName];
-            global.jobs[jobName] = new job(jobName);
+            global.bootstrap = new global.jobClasses.bootstrap();
         } catch (e) {
-            console.log('had the following error when instatiating the following job: ' + jobName);
+            console.log('had the following error when instantiating bootstrap');
             console.log(e.stack);
-            debugger;
+            debugger; 
         }
-    }
-    if(Game.rooms['sim']) {
-        initializeSimRoom();
     }
 };

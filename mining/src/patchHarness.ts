@@ -4,7 +4,8 @@ interface Patches {
 
 interface Patch {
 	patch: () => void,
-	version: string
+	version: string,
+	postInit?: boolean
 }
 
 var patches : Patches = {
@@ -51,17 +52,25 @@ var patches : Patches = {
      	 'E37S14': ['E38S14','E39S14','E38S15'],
      	 'E39S16': ['E39S15']};
       _.forEach(roomAllocation, function (reservedRooms: string[], claimedRoomName: string) {
-      	global.jobs.bootstrap.claimRoom(claimedRoomName);
+      	global.bootstrap.claimRoom(claimedRoomName);
       	_.forEach(reservedRooms, function (reservedRoom: string) {
-      		global.jobs.bootstrap.reserveRoom(reservedRoom, claimedRoomName);
+      		global.bootstrap.reserveRoom(reservedRoom, claimedRoomName);
       	})
       });
+		},
+		version: 'Mining',
+		postInit: true
+	},
+	wipeMemory: {
+		patch: function () {
+			delete Memory.jobs;
+			delete Memory.rooms;
 		},
 		version: 'Mining'
 	}
 };
 
-var oneTimePatch = function() {
+var oneTimePatch = function(postInit : boolean) {
 	if(Game.rooms['sim']) {
 		return;
 	}
@@ -76,6 +85,9 @@ var oneTimePatch = function() {
 
 	_.forEach(patches, function (patch: Patch, patchName: string) {
 		if(currentPatches[patchName].ran) {
+			return true;
+		}
+		if(patch.postInit != postInit) {
 			return true;
 		}
 		if(patch.version != global.Version) {
