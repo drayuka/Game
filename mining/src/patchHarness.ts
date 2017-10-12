@@ -50,7 +50,7 @@ var patches : Patches = {
        'E33S11': ['E33S12','E32S11','E31S11'],
      	 'E31S12': ['E32S12','E32S13','E31S13'],
      	 'E37S14': ['E38S14','E39S14','E38S15'],
-     	 'E39S16': ['E39S15']};
+     	 'E39S16': ['E39S15','E38S16','E38S17']};
       _.forEach(roomAllocation, function (reservedRooms: string[], claimedRoomName: string) {
       	global.bootstrap.claimRoom(claimedRoomName);
       	_.forEach(reservedRooms, function (reservedRoom: string) {

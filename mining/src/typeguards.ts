@@ -62,7 +62,8 @@ namespace NodeJS {
 		bootstrap: bootstrapJob,
 		creeps: CreepList,
 		utils: typeof Utils,
-		goal: typeof GoalClass
+		goal: typeof GoalClass,
+		username: string
 	}
 }
 

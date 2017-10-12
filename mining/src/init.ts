@@ -16,6 +16,7 @@ var jobs: JobDefinitionList = {
 }
 global.utils = require('utils');
 global.goal = require('goal');
+global.username = 'shockfist';
 
 var initialize = function () {
     if(!Memory.jobs) {
