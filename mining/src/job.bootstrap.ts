@@ -147,15 +147,14 @@ class bootstrapJob {
         if(!Game.rooms[claimedRoomName]) {
             throw new Error('claimed room ' + claimedRoomName + ' is not visible');
         }
-        if(_.find(self.claimedRooms[claimedRoomName].reservedRooms, function (room, roomName) {
-            return reservedRoomName == roomName;
-        })) {
-            throw new Error('room ' + reservedRoomName + ' is already reserved by this room')
+        if(self.reservedRoomClaimRoom[reservedRoomName]) {
+            throw new Error('reserved ' + reservedRoomName + ' already reserved by ' + self.reservedRoomClaimRoom[reservedRoomName]);
         }
         var room = Game.rooms[reservedRoomName];
         if(room && room.controller.owner) {
             throw new Error(reservedRoomName + ' is already owned by ' + room.controller.owner.username);
         }
+
         //all checks are done, add it in;
         self.claimedRooms[claimedRoomName].reservedRooms[reservedRoomName] = {roomMemory : {
             upgrading : false,
@@ -170,7 +169,13 @@ class bootstrapJob {
             logistics : false,
             protector : false
         }};
+        var reserveRoom = self.claimedRooms[claimedRoomName].reservedRooms[reservedRoomName];
         var claimedRoom = self.claimedRooms[claimedRoomName];
+        claimedRoom.jobs.scout.addRoomToScout(reservedRoomName);
+        claimedRoom.jobs.reserve.addRoomToReserve(reservedRoomName);
+        reserveRoom.scout = true;
+        reserveRoom.reserve = true;
+        //reset so that this reserve room now appears there.
         delete self._reserveRoomToClaimRoom;
     }
     //also automatically unreserves all rooms associated with that claimed room
@@ -181,6 +186,11 @@ class bootstrapJob {
         })) {
             throw new Error('room ' + claimedRoomName + ' cannot be unclaimed as it was not claimed');
         }
+        // unreserve all rooms reserved for this claim room.
+        _.forEach(self.claimedRooms[claimedRoomName].reservedRooms, function (reservedRoom, roomName) {
+            self.unReserveRoom(roomName);
+        });
+
         var claimedRoom = self.claimedRooms[claimedRoomName];
         var roomMemory : roomMemory = self.claimedRooms[claimedRoomName].roomMemory;
         if(roomMemory.upgrading) {
@@ -202,25 +212,26 @@ class bootstrapJob {
         }
         //always do this as other jobs create the goals for logistics
         claimedRoom.jobs.logistics.removeRoomNodesAndCleanup(claimedRoomName);
-        _.forEach(self.claimedRooms[claimedRoomName].reservedRooms, function (reservedRoom, roomName) {
-            self.unReserveRoom(roomName);
-        });
+
         Game.rooms[claimedRoomName].find(FIND_STRUCTURES, {filter: function (struct : Structure) {
             struct.destroy();
         }});
         Game.rooms[claimedRoomName].controller.unclaim();
+        //delete memory for all jobs.
+        _.forEach(self.claimedRooms[claimedRoomName].jobs, function (job, jobName) {
+            delete job.memory;
+        });
         delete self.claimedRooms[claimedRoomName];
     }
     //TODO: FIX AS THIS DOES NOT CURRENTLY WORK
     unReserveRoom (reservedRoomName : string) {
         throw new Error('unreserve room is currently non functional');
         var self = this;
-        if(!_.find(self.claimedRooms, function(room, roomName) {
-            return roomName == reservedRoomName;
-        })) {
+        if(!self.reservedRoomClaimRoom[reservedRoomName]) {
             throw new Error('room ' + reservedRoomName + ' cannot be unreserved as it was not reserved');
         }
-        var claimedRoom = self.reservedRoomClaimRoom[reservedRoomName];
+        var claimedRoomName = self.reservedRoomClaimRoom[reservedRoomName];
+
     }
     get reservedRoomClaimRoom() {
         var self = this;
