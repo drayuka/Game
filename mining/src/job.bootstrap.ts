@@ -281,19 +281,59 @@ class bootstrapJob {
             });
         });
     }
-    checkClaimedRoom(roomName: string, roomMemory: any) {
+    checkClaimedRoom(roomName: string, claimedRoom: claimedRoom) {
         var self = this;
+        var roomMemory = claimedRoom.roomMemory;
+        var jobs = claimedRoom.jobs;
+        var reservedRooms = claimedRoom.reservedRooms;
+
         if(!Game.rooms[roomName]) {
             console.log('cant check claimed room ' + roomName + ' as it is not visible');
+            return;
         }
         var room = Game.rooms[roomName];
+
+        if(room.controller.my && !roomMemory.upgrading) {
+            roomMemory.upgrading = jobs.upgrade.addRoom(roomName);
+        }
+        if(room.storage && !roomMemory.storage) {
+            roomMemory.storage == jobs.logistics.addNode(Game.rooms[roomName].storage, 'storage');
+        }
+        if((!roomMemory.linking && room.controller.level >= 5) || (roomMemory.linking != room.controller.level)) {
+            var result = jobs.links.setupRoomLinks(roomName);
+            if(!result) {
+                throw new Error('failed to setup room links for ' + roomName);
+            }
+            roomMemory.linking = room.controller.level;
+        }
+        if(!roomMemory.roomworker) {
+            roomMemory.roomworker = jobs.roomworker.addRoom(roomName);
+        }
+        if(!roomMemory.harvest) {
+            roomMEmory.harvest = jobs.harvest.addSources(roomName);
+        }
+        if(!roomMemory.protect) {
+            roomMemory.protect = jobs.protector.addRoomToProtect(roomName);
+        }
+        _.forEach(reservedRooms, function (reservedRoom) {
+            self.checkReservedRoom(reservedRoomName, reservedRoom);
+        })
+    }
+    checkReservedroom(roomName, reservedroom) {
+        var self = this;
     }
     checkRooms() {
         var self = this;
 
         _.forEach(self.claimedRooms, function (claimedRoom, claimedRoomName) {
             claimedRoomMemory = claimedRoom.roomMemory;
-            checkClaimedRoom(claimedRoomName, claimedRoomMemory);
+            try {
+                self.checkClaimedRoom(claimedRoomName, claimedRoom);
+            } catch (e) {
+                console.log('had problems checking claimed room ' + claimedRoomName ':');
+                console.log(e.stack);
+                debugger;
+            }
         });
         if(!self.memory.rooms) {
             self.memory.rooms = {};
