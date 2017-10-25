@@ -7,14 +7,14 @@
  * mod.thing == 'a thing'; // true
  */
 class GoalClass {
-    job: JobClass;
+    job: JobClass | undefined;
     roomName: string;
     id: string;
     private _meta: any;
     private _target?: RoomObject;
     private _positions?: RoomPosition[];
     // this construction should do as little as possible!
-    constructor(job: JobClass, roomName: string, target: RoomObject | string, meta: any) {
+    constructor(job: JobClass | undefined, roomName: string, target: RoomObject | string, meta: any) {
         var self = this;
         // direct link back into this goal's job.
         self.job = job;

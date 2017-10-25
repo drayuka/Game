@@ -89,10 +89,10 @@ class CreepClass extends Creep {
     arrived () {
         var self = this;
         if(self.memory.arrived) {
-            return 1;
+            return true;
         }
         if(self.path && self.path.length != 0) {
-            return 0;
+            return false;
         }
         if(self.path && self.path.length == 0) {
             var posAt = _.find(self.goal.positions, function (pos) {
@@ -100,49 +100,27 @@ class CreepClass extends Creep {
             });
             if(posAt) {
                 delete self.memory.path;
-                self.memory.arrived = 1;
-                return 1;
+                self.memory.arrived = true;
+                return true;
             }
         }
-        return 0;
-    }
-    set job (job : JobClass) {
-        var self = this;
-        if(typeof job == 'string') {
-            self._job = global.jobs[<string>job];
-            self.memory.jobName = job;
-        } else {
-            self._job = job;
-            self.memory.jobName = job.name;
-        }
-    }
-    get job () : JobClass {
-        var self = this;
-        if(!self._job) {
-            self._job = global.jobs[self.memory.jobName];
-        }
-        return self._job;
+        return false;
     }
     get goal () {
         var self = this;
-        if(!self._goal && self.memory.goal) {
-            if(self.memory.goalJob) {
-                self._goal = global.jobs[self.memory.goalJob].goals[self.memory.goal];
-            } else {
-                self._goal = self.job.goals[self.memory.goal];    
-            }
+        if(!self._goal && self.memory.creepGoal) {
+            var goalmemory = self.memory.creepGoal;
+            self._goal = new GoalClass(undefined, goalmemory.roomName, goalmemory.id, goalmemory.meta);
         }
         return self._goal;
     }
-    set goal (goal) {
+    set goal (goal: GoalClass) {
         var self = this;
-        if(goal.job != this.job) {
-            self.memory.goalJob = goal.job.name;
-        } else {
-            delete self.memory.goalJob;
+        self.memory.creepGoal = {
+            id: goal.id,
+            roomName: goal.roomName,
+            meta: goal.meta
         }
-        self._goal = goal;
-        self.memory.goal = goal.id;
         self.memory.arrived = 0;
     }
     get path () {
@@ -186,7 +164,7 @@ class CreepClass extends Creep {
                 }
                 if(roomPath.length == 1 && Game.rooms[roomPath[0].room]) {
                     targets = _.map(self.goal.positions, function (pos) {
-                        return {pos: pos, range: 0}
+                        return {pos: pos, range: 0};
                     });
                 } else {
                     targets = <Array<distancePos>>_.map(self.room.find(roomPath[0].exit), function (site) {
@@ -209,11 +187,37 @@ class CreepClass extends Creep {
             //path coordinate
             self.moveFailure++;
             if(self.moveFailure > 4) {
-                self.memory.path = undefined;
-                self._path = undefined;
+                delete self.memory.path;
+                delete self._path;
                 self.moveFailure = 0;
             }
         }
+    }
+    //this function assumes that you are not already in the room you are navigating to.
+    navigateToRoom (roomName: string) {
+        var self = this;
+        if(!self.memory.path || self.memory.path.length == 0) {
+            let targets: distancePos[];
+            var roomPath = global.utils.getRoomPath(self.pos.roomName, roomName);
+            // got an error back when trying to path to that room
+            if(typeof roomPath === 'number') {
+                throw new Error('could not path from ' + self.pos.roomName + ' to ' + roomName);
+            }
+            targets = <Array<distancePos>>_.map(self.room.find(roomPath[0].exit), function (site) {
+                return {pos: site, range: 0};
+            });
+            self.path = self.findPath(targets, false);
+        }
+        var result = self.moveByPath([self.nextPathPos]);
+        if(result != ERR_TIRED) {
+            self.moveFailure++;
+            if(self.moveFailure > 4) {
+                delete self.memory.path;
+                delete self._path;
+                self.moveFailure = 0;
+            }
+        }
+        return false;
     }
     get moveFailure () {
         var self = this;

@@ -14,16 +14,18 @@ class JobClass {
     */
     name: string;
     memory: any;
+    protected jobs: JobList;
     protected _goals: GoalList;
     protected _creeps: CreepList;
     protected parentClaim: string;
     execute () {
         throw new Error('must implement an execute function');
     }
-    constructor(name: string, parentClaimRoom: string) {
+    constructor(name: string, parentClaimRoom: string, jobs: JobList) {
         var self = this;
         self.name = name;
         self.parentClaim = parentClaimRoom;
+        self.jobs = jobs;
         self.initialize();
         self._maintain();
     }
@@ -44,6 +46,12 @@ class JobClass {
             }
         });
         self.removeDeadCreeps(deadCreeps);
+    }
+    get rooms {
+        var self = this;
+        var rooms = _.keys(global.bootstrap.claimedRooms[self.parentClaim].reservedRooms);
+        rooms.push(self.parentClaim);
+        return rooms;
     }
     removeDeadCreeps (deadCreeps: string[]) {
         var self = this;
@@ -197,10 +205,6 @@ class JobClass {
         self.creeps[creepName].memory.arrived = 0;
         self.goals[goalId].assignments.push(creepName);
     }
-    get cleanGoalPositions () {
-        var self = this;
-        return 1;
-    }
     getGoalsInRoom(roomName: string) {
         var self = this;
         return _.map(self.memory.goals[roomName], function (goalMeta, goalId) {
@@ -218,7 +222,7 @@ class JobClass {
         }
         if(self.goals[goalId]) {
             self.goals[goalId].assignments = _.difference(self.goals[goalId].assignments, [creepName]);
-            if(self.cleanGoalPositions && self.goals[goalId].assignments.length == 0) {
+            if(self.goals[goalId].assignments.length == 0) {
                 self.goals[goalId].clearPositions();
             }
         }

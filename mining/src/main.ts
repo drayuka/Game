@@ -33,19 +33,10 @@ module.exports.loop = function () {
         debugger;
     }
     try{
-        global.bootstrap.runRooms();
+        global.bootstrap.execute();
     } catch(e) {
         console.log('global bootstrap job had the following error: ');
         console.log(e.stack);
         debugger;
-    }
-    _.forEach(Memory.creeps, function (creep: any ,name: string) {
-        if(!Game.creeps[name]) {
-            delete Memory.creeps[name];
-        }
-    });
-    delete Memory.roomCosts;
-    if (Memory.cleanup) {
-        Memory.cleanup = 0;
     }
 };

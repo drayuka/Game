@@ -1,5 +1,5 @@
 
-var jobs: JobDefinitionList = {
+global.jobClasses = {
     upgrade: require('job.upgradeController'),
     spawn: <spawnJob>require('job.spawn'),
     harvest: require('job.harvest'),

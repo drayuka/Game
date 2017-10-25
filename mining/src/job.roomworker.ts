@@ -14,50 +14,13 @@ var creep = require('creep');
 class roomworker extends JobClass {
     execute () {
         var self = this;
-        self.deleteGoals();
         if(Game.time % 20) {
             self.findGoals();
             self.raiseDefenseMaximums();
         }
         self.deactivateGoals();
-        self.assignGoals();
         self.updateRequisition();
         self.controlWorkers();
-    }
-    get cleanGoalPositions () {
-        var self = this;
-        return true;
-    }
-    removeCreep(creepName) {
-        var self = this;
-        var workRoom = Memory.creeps[creepName].workRoom;
-        self.memory.roomAssignments[workRoom] = _.difference(self.memory.roomAssignments[workRoom], [creepName]);
-        super.removeCreep(creepName);
-    }
-    addCreep(creepName) {
-        var self = this;
-        var myCreep = global.creeps[creepName];
-        if(!myCreep) {
-            throw new Error('could not find creep to add ' + creepName);
-        }
-        myCreep.job = self;
-        self.memory.creeps.push(creepName);
-        if(self._creeps) {
-            self._creeps[creepName] = myCreep;
-        }
-        var creepRoom = myCreep.memory.goal;
-        delete myCreep.memory.goal;
-        if(!creepRoom) {
-            throw new Error('adding creep with no room ' + creepName);
-        }
-        if(!self.memory.roomAssignments[creepRoom]) {
-            throw new Error('adding creep ' + creepName + ' with room that doesnt exist ' + creepRoom);
-        }
-        myCreep.memory.workRoom = creepRoom;
-        self.memory.roomAssignments[creepRoom].push(creepName);
-    }
-    get keeps () {
-        return ['workRoom'];
     }
     removeRoom(roomName) {
         var self = this;
@@ -84,23 +47,244 @@ class roomworker extends JobClass {
         }
         self.memory.defenseMaximum[roomName] = 10000;
         self.findGoalsInRoom(roomName);
-        return 1;
+        return true;
     }
-    get priority () {
+    get maxbuildSize () {
         var self = this;
         return {
-            'spawn': 2,
-            'extension': 2,
-            'tower': 1,
-            'lab': 4,
-            'road': 3,
-            'constructedWall': 6,
-            'rampart': 6,
+
         }
     }
-    get goalsByRoomGroup () {
+    missionGenerators() {
         var self = this;
-        _.forEach()
+        return {
+            repairRoads: {
+                init: function (missionMem: any) {
+                    missionMem.missions = {};
+                    missionMem.lastCheck = {};
+                },
+                new: function (missionMem: any, rooms: string[]) : Mission[] {
+                    var newMissions : Mission[] = [];
+                    _.forEach(rooms, function (roomName) {
+                        var room = Game.rooms[roomName];
+                        // can't see in the room, can't check the roads
+                        if(!room) {
+                            return true;
+                        }
+                        // already have a mission to repair roads in this room
+                        if(missionMem.missions[room.name]) {
+                            return true;
+                        }
+                        // only check every 1000 ticks
+                        if(missionMem.lastCheck[room.name] + 1000 > Game.time) {
+                            return true;
+                        }
+                        missionMem.lastCheck[room.name] = Game.time;
+                        console.log('checking road repair in ' + room.name);
+                        var maxWorkerPower = self.getWorkerPower();
+                        //max amount of energy that can be carried by the creep - 20% so that we can repair to full
+                        var maxRepair = maxWorkerPower * 150 * 100 * .8;
+                        var structures = <Structure[]>room.find(FIND_STRUCTURES);
+                        var needsRepair = false;
+                        var currentRepairAmount = 0;
+                        var roadsNeedingRepair: string[] = [];
+                        _.forEach(structures, function (struct) {
+                            if(struct.structureType != STRUCTURE_ROAD) {
+                                return true;
+                            }
+                            currentRepairAmount += struct.hitsMax - struct.hits;
+                            if(struct.hitsMax != struct.hits) {
+                                roadsNeedingRepair.push(struct.id);
+                            }
+                            if(!needsRepair && currentRepairAmount >= maxRepair) {
+                                needsRepair = true;
+                            }
+                            if(!needsRepair && struct.hits/struct.hitsMax < .3) {
+                                //emergency repairs needed
+                                needsRepair = true;
+                            }
+                        });
+                        // doesn't need repair move along, but only check 1 per tick
+                        if(!needsRepair) {
+                            return false;
+                        }
+                        var mission : Mission = {
+                            maxWorkers: 1,
+                            runner: 'runMission',
+                            missionInit: 'creepMissionInit',
+                            creeps: [],
+                            priority: 1,
+                            other: {
+                                roomName: room.name,
+                                roads: roadsNeedingRepair
+                            }
+                        }
+                        missionMem.missions[room.name] = 1;
+                        newMissions.push(mission);
+                        // only check 1 room per tick;
+                        return false;
+                    });
+                    return newMissions;
+                },
+                remove: function (missionMem: any, mission: Mission) {
+                    delete missionMem.missions[mission.other.roomName];
+                },
+                creepMissionInit:  function (creep : CreepClass) {
+                    creep.memory.missionStatus = {
+                        gettingEnergy : false,
+                        repairingRoad : false,
+                        target: undefined,
+                        sortTimer: 0
+                    }
+                },
+                runMission: function (mission: Mission, creeps: CreepClass[]) {
+                    // should only be one creep
+                    var creep = creeps[0];
+                    if(creep.memory.missionStatus.gettingEnergy) {
+                        if(self.getEnergy(creep)) {
+                            creep.memory.missionStatus.gettingEnergy = false;
+                        }
+                    } else if(creep.memory.missionStatus.repairingRoad) {
+                        
+                        var roads: StructureRoad[] = [];
+                        if(creep.pos.roomName != mission.other.roomName) {
+                            creep.navigateToRoom
+                            return {continue: true};
+                        }
+                        //creep has arrived at target, wipe target
+                        if(creep.arrived()) {
+                            delete creep.memory.missionStatus.target;
+                            delete creep.memory.arrived;
+                        }
+                        if(!creep.memory.missionStatus.target) {
+                            roads = _.map(mission.other.roads, function (roadid: string) {
+                                return <StructureRoad>Game.getObjectById(roadid)
+                            });
+                            roads = _.sortBy(roads,function (a) {
+                                return a.pos.getRangeTo(creep.pos);
+                            });
+                            var furthestRoad = roads[roads.length-1];
+                            creep.memory.missionStatus.target = furthestRoad.id;
+                            var newGoal = new GoalClass(undefined, mission.other.roomName, furthestRoad, {range: 3, halts: true});
+                            creep.goal = newGoal;
+                        }
+                        var roadsNotRepaired: StructureRoad[] = [];
+                        var roadsRemoved: string[] = [];
+                        var needToStort: boolean = false;
+                        if(roads) {
+                            mission.other.roads = _.map(roads, function (road) {
+                                return road.id;
+                            });
+                            creep.memory.missionStatus.sortTimer = Game.time + 2;
+                        } else if(Game.time > creep.memory.missionStatus.sortTimer) {
+                            mission.other.roads = _.sortBy(mission.other.roads, function (roadid: string) {
+                                var road = <StructureRoad>Game.getObjectById(roadid);
+                                if(!road) {
+                                    return 0;
+                                } else {
+                                    return road.pos.getRangeTo(creep.pos);
+                                }
+                            });
+                        }
+                        mission.other.roads = _.dropWhile(mission.other.roads, function (roadid: string) {
+                            var road = <StructureRoad>Game.getObjectById(roadid);
+                            // if we couldn't find it, give up.
+                            if(!road) {
+                                return true;
+                            }
+                            // if it is 
+                            if(road.hits/road.hitsMax > .9) {
+                                roadsRemoved.push(road.id);
+                                return true;
+                            } else if(road.pos.getRangeTo(creep.pos) > 3 && creep.memory.missionStatus.sortTimer <= Game.time) {
+                                return false;
+                            }
+                        });
+                        // no more roads that need repair that we know about
+                        if(mission.other.roads.length = 0) {
+                            return {continue: false}
+                        }
+                        var closestRoad = <StructureRoad>Game.getObjectById(mission.other.roads[0]);
+                        if(closestRoad.pos.getRangeTo(creep.pos) <= 3) {
+                            creep.repair(closestRoad);
+                            creep.memory.missionStatus.sortTimer++;
+                        }
+                        //if we aren't done but we are out of energy, stop having the repair road status
+                        if(creep.carry[RESOURCE_ENERGY] == 0) {
+                            creep.memory.missionStatus.repairingRoad = false;
+                        }
+                        creep.navigate();
+                    } else {
+                        if(creep.carry[RESOURCE_ENERGY] == creep.carryCapacity) {
+                            creep.memory.missionStatus.repairingRoad = true;
+                        } else {
+                            creep.memory.missionStatus.gettingEnergy = true;
+                        }
+                    }
+                    return {continue: true};
+                }
+            },
+            buildStructures: {
+                new: function (missionMem: any, rooms :string[]) {
+
+                },
+                runMission: function (mission: Mission, creeps: CreepClass[]) {
+
+                }
+            },
+            upgradeWallsAndRamparts: {
+                new: function (missionMem: any, rooms: string[]) {
+
+                },
+                runMission: function (mission: Mission, creeps: CreepClass[]) {
+
+                }
+            }
+        }
+    }
+    getEnergy(creep: CreepClass) {
+        var self = this;
+        if(creep.carry[RESOURCE_ENERGY] == creep.carryCapacity) {
+            return true;
+        }
+        if(!creep.memory.navigatingToEnergy) {
+            creep.memory.arrived = false;
+            var closestStorage = _.find(self.jobs.logistics.getStoragesAtRange(creep.goal.roomName, 3), function (storage: StructureStorage) {
+                if(storage.store[RESOURCE_ENERGY] != 0) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            if(!closestStorage) {
+                throw new Error('cant find a storage in range of room ' + myCreep.goal.roomName);
+            }
+            creep.memory.navigatingToEnergy = true;
+            creep.goal = self.jobs.logistics.goals[closestStorage.id];
+        }
+
+        if(!creep.arrived()) {
+            creep.navigate();
+        } else {
+            creep.withdraw(<Structure>creep.goal.target, RESOURCE_ENERGY);
+            creep.memory.navigatingToEnergy = false;
+        }
+        return false;
+    }
+    generateMissions () {
+        var self = this;
+        _.forEach(self.missionGenerators, function (missionGen, missionName) {
+            var newMissions = self.missionGen.new(self.memory.missionGen[missionName], self.rooms);
+            if(newMissions.length != 0) {
+                self.addMissions(newMissions);
+            }
+        }); 
+    }
+    assignMissions(roomName) {
+        var self = this;
+        _.forEach(self.freeWorkers, function (freeworker) {
+
+        });
     }
     findGoalsInRoom(roomName) {
         var self = this;
@@ -108,6 +292,7 @@ class roomworker extends JobClass {
             return;
         }
         var room = Game.rooms[roomName];
+
         var newSites;
         if(room.controller.my) {
             newSites = room.find(FIND_STRUCTURES, { filter: function (structure) {
@@ -389,5 +574,15 @@ class roomworker extends JobClass {
             }
         }
     }
+}
+
+interface Mission {
+    maxWorkers: number,
+    runner: string,
+    missionInit: string,
+    goals: string[],
+    creeps: string[],
+    priority: number,
+    other: any
 }
 module.exports = roomworker;
