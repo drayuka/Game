@@ -14,46 +14,10 @@ var creep = require('creep');
 class roomworker extends JobClass {
     execute () {
         var self = this;
-        if(Game.time % 20) {
-            self.findGoals();
-            self.raiseDefenseMaximums();
-        }
-        self.deactivateGoals();
         self.updateRequisition();
-        self.controlWorkers();
-    }
-    removeRoom(roomName) {
-        var self = this;
-        self.memory.activeRooms = _.difference(self.memory.activeRooms, [roomName]);
-        if(self.memory.roomAssignments && self.memory.roomAssignments[roomName]) {
-            _.forEach(self.memory.roomAssignments[roomName], function (creepName) {
-                self.creeps[creepName].suicide();
-            });
-            delete self.memory.roomAssignments[roomName]
-        }
-        _.forEach(self.getGoalsInRoom(roomName), function (goal) {
-            self.removeGoal(goal.id);
-        });
-    }
-    addRoom (roomName) {
-        var self = this;
-        self.memory.activeRooms = _.union([roomName], self.memory.activeRooms);
-        if(!self.memory.roomAssignments) {
-            self.memory.roomAssignments = {};
-        }
-        self.memory.roomAssignments[roomName] = [];
-        if(!self.memory.defenseMaximum) {
-            self.memory.defenseMaximum = {};
-        }
-        self.memory.defenseMaximum[roomName] = 10000;
-        self.findGoalsInRoom(roomName);
-        return true;
-    }
-    get maxbuildSize () {
-        var self = this;
-        return {
-
-        }
+        self.generateMissions();
+        self.assignMissions();
+        self.runMissions();
     }
     missionGenerators() {
         var self = this;
@@ -109,6 +73,7 @@ class roomworker extends JobClass {
                             return false;
                         }
                         var mission : Mission = {
+                            missionName: 'repairRoads',
                             maxWorkers: 1,
                             runner: 'runMission',
                             missionInit: 'creepMissionInit',
@@ -211,7 +176,10 @@ class roomworker extends JobClass {
                         }
                         //if we aren't done but we are out of energy, stop having the repair road status
                         if(creep.carry[RESOURCE_ENERGY] == 0) {
-                            creep.memory.missionStatus.repairingRoad = false;
+                            return {
+                                creepsToGiveBack: [creep.name],
+                                continue: true
+                            };
                         }
                         creep.navigate();
                     } else {
@@ -225,18 +193,159 @@ class roomworker extends JobClass {
                 }
             },
             buildStructures: {
-                new: function (missionMem: any, rooms :string[]) {
-
+                new: function (missionMem: any, rooms :string[]) : Mission[] {
+                    var newMissions : Mission[] = [];
+                    _.forEach(rooms, function (roomName) {
+                        var room = Game.rooms[roomName];
+                        if(!room) {
+                            return;
+                        }
+                        var newBuildSites: ConstructionSite[] = room.find(FIND_MY_CONSTRUCTION_SITES, {filter: function (site) {
+                            if(missionMem.missions[site.id]) {
+                                return false;
+                            } 
+                            return true;
+                        }});
+                        if(newBuildSites.length == 0) {
+                            return true;
+                        }
+                        newMissions.push(...<Mission[]>_.map(newBuildSites, function (buildSite) {
+                            missionMem.missions[buildSite.id] = true;
+                            var pos = undefined;
+                            var type = undefined;
+                            if(buildSite.structureType == STRUCTURE_RAMPART || buildSite.structureType == STRUCTURE_WALL) {
+                                pos = [buildSite.pos.x, buildSite.pos.y, buildSite.pos.roomName];
+                                type = buildSite.structureType;
+                            }
+                            return {
+                                missionName: 'buildStructures',
+                                maxWorkers: Infinity,
+                                runner: 'runMission',
+                                missionInit: 'creepMissionInit',
+                                creeps: [],
+                                priority: 2,
+                                other: {
+                                    buildSiteId: buildSite.id,
+                                    pos: pos,
+                                    type: type
+                                }
+                            };
+                        }));
+                    });
+                    return newMissions;
+                },
+                init: function (missionMem: any) {
+                    missionMem.missions = {};
+                },
+                remove: function (missionMem: any, mission: Mission) {
+                    delete missionMem.missions[mission.other.buildSiteId];
                 },
                 runMission: function (mission: Mission, creeps: CreepClass[]) {
-
+                    var doneCreeps : CreepClass[] = [];
+                    var buildSite = <ConstructionSite>Game.getObjectById(mission.other.buildSiteId);
+                    var defSite: Structure;
+                    if(!buildSite) {
+                        // if this is a rampart or wall we need to build it up a bit, before we let other jobs deal with it
+                        if(mission.other.type == STRUCTURE_RAMPART || mission.other.type == STRUCTURE_WALL) {
+                            if(mission.other.defSite) {
+                                defSite = Game.getObjectById(mission.other.defSite);
+                                if(!defSite) {
+                                    throw new Error('couldnt find the ' + mission.other.type + ' at ' + JSON.stringify(mission.other.pos));
+                                }
+                                // defense site is high enough, we can build it up normally;
+                                if(defSite.hits > 10000) {
+                                    return {
+                                        continue: false;
+                                    }
+                                }
+                            } else {
+                                var pos = new RoomPosition(...mission.other.pos);
+                                var structures = _.filter(pos.lookFor(LOOK_STRUCTURES), function (struct: Structure) {
+                                    return struct.structureType == mission.other.type;
+                                });
+                                if(structures.length == 0) {
+                                    throw new Error('couldnt find the ' + mission.other.type + ' at ' + JSON.stringify(mission.other.pos));
+                                }
+                                defSite = structures[0];
+                                mission.other.defSite = defSite.id;
+                            }
+                        } else {
+                            return {
+                                continue: false;
+                            }
+                        }
+                    }
+                    _.forEach(creeps, function (creep) {
+                        if(creep.memory.missionStatus.gettingEnergy) {
+                            if(self.getEnergy(creep)) {
+                                creep.memory.missionStatus.gettingEnergy = false;
+                            }
+                        } else if(creep.memory.missionStatus.buildingStructure) {
+                            if(!creep.memory.goal) {
+                                var newgoal = new GoalClass(undefined, buildSite.pos.roomName, buildSite.id, {range: 3, halts: true});
+                            }
+                            if(creep.arrived()) {
+                                if(buildSite) {
+                                    creep.build(buildSite);
+                                } else if (defSite) {
+                                    creep.repair(defSite);
+                                }
+                            } else {
+                                creep.navigate();
+                            }
+                            if(creep.carry[RESOURCE_ENERGY] == 0) {
+                                doneCreeps.push(creep);
+                            }
+                        } else {
+                            if(creep.carry[RESOURCE_ENERGY] == creep.carryCapacity) {
+                                creep.memory.missionStatus.buildingStructure = true;
+                            } else {
+                                creep.memory.missionStatus.gettingEnergy = true;
+                            }
+                        }
+                    });
+                    return {
+                        creepsToGiveBack: doneCreeps;
+                        continue: true
+                    }
+                },
+                creepMissonInit: function (creep: CreepClass) {
+                    creep.memory.missionStatus = {
+                        gettingEnergy : false,
+                        buildingStructure : false,
+                    };
                 }
             },
             upgradeWallsAndRamparts: {
-                new: function (missionMem: any, rooms: string[]) {
+                init: function (missionMem: any) : void {
+                    missionMem.missions = {};
+                    missionMem.roomDefenseLimits = {};
+                    missionMem.lastCheck = {};
+                },
+                new: function (missionMem: any, rooms: string[]) : Mission[] {
+                    _.forEach(rooms, function (roomName) {
+                        var room = Game.rooms[roomName];
+                        if(!room) {
+                            return true;
+                        }
+                        // skip any room which doesn't have a controller, owner, or where the owner of the controller isn't us
+                        if(!room.controller || !room.controller.owner || room.controller.owner.username != global.username) {
+                            return true;
+                        }
+                        if(missionMem.lastCheck + 1000 > Game.time) {
+
+                        }
+
+                        var 
+                    });
+                },
+                remove: function (missionMem: any, mission: Mission) {
 
                 },
                 runMission: function (mission: Mission, creeps: CreepClass[]) {
+
+                },
+                creepMissionInit: function (creep: CreepClass) : void {
 
                 }
             }
@@ -273,228 +382,106 @@ class roomworker extends JobClass {
     }
     generateMissions () {
         var self = this;
+        if(!self.memory.missionGen) {
+            self.memory.missionGen = {};
+        }
         _.forEach(self.missionGenerators, function (missionGen, missionName) {
-            var newMissions = self.missionGen.new(self.memory.missionGen[missionName], self.rooms);
-            if(newMissions.length != 0) {
-                self.addMissions(newMissions);
+            //mission gen init
+            if(!self.memory.missionGen[missionName]) {
+                missionGen.init(self.memory.missionGen[missionName]);
             }
-        }); 
-    }
-    assignMissions(roomName) {
-        var self = this;
-        _.forEach(self.freeWorkers, function (freeworker) {
-
+            var newMissions = <Mission[]>missionGen.new(self.memory.missionGen[missionName], self.rooms);
+            _.forEach(newMissions, function(newMission) {
+                self.memory.missions[newMission.priority].push(newMission);
+            });
         });
     }
-    findGoalsInRoom(roomName) {
+    assignMissions() {
         var self = this;
-        if(!Game.rooms[roomName]) {
-            return;
-        }
-        var room = Game.rooms[roomName];
-
-        var newSites;
-        if(room.controller.my) {
-            newSites = room.find(FIND_STRUCTURES, { filter: function (structure) {
-                if(self.goals[structure.id]) {
-                    return 0;
-                }
-                if(_.includes([STRUCTURE_ROAD, STRUCTURE_WALL, STRUCTURE_RAMPART, STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_LAB], structure.structureType)
-                    && structure.isActive()) {
-                    return 1;
-                }
-                return 0;
-            }});
-        } else {
-            newSites = room.find(FIND_STRUCTURES, { filter: function (structure) {
-                if(self.goals[structure.id]) {
-                    return 0;
-                }
-                if(structure.structureType == STRUCTURE_ROAD) {
-                    return 1;
-                }
-                return 0;
-            }});
-        }
-        if(newSites.length > 0) {
-            _.forEach(newSites, function (site) {
-                var halts = 0;
-                var range = 1;
-                if(_.includes([STRUCTURE_ROAD, STRUCTURE_WALL, STRUCTURE_RAMPART], site.structureType)) {
-                    halts = 1;
-                    range = 3;
-                }
-                self.addGoal(site.pos.roomName, site, {range: range, priority: self.priority[site.structureType], halts: halts});
-            });
-        }
-        var newDefenseConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES, {filter: function (structure) {
-            if(self.goals[structure.id]) {
-                return 0;
-            }
-            return 1;
-        }});
-        if(newDefenseConstructionSites.length > 0) {
-            _.forEach(newDefenseConstructionSites, function (site) {
-                self.addGoal(site.pos.roomName, site, {range: 3, priority: 5, halts: 1});
-            });
-        }
-    }
-    findGoals () {
-        var self = this;
-        _.forEach(self.memory.roomAssignments, function (creeps, roomName) {
-            self.findGoalsInRoom(roomName);
-        });
-    }
-    raiseDefenseMaximums () {
-        var self = this;
-        _.forEach(self.memory.roomAssignments, function (creeps, roomName) {
-            var defenseGoals = _.filter(self.getGoalsInRoom(roomName), function (goal) {
-                if(goal.target.structureType == STRUCTURE_RAMPART || goal.target.structureType == STRUCTURE_WALL) {
-                    return 1;
-                }
-                return 0;
-            });
-            if(defenseGoals.length == 0) {
-                return true;
-            }
-            var activeGoals = _.filter(defenseGoals, function (goal) {
-                if(goal.target.hits < self.memory.defenseMaximum[goal.roomName]) {
-                    return 1;
-                }
-                return 0;
-            });
-            if(activeGoals.length == 0) {
-                self.memory.defenseMaximum[roomName] += self.defenseIncrement;
-                console.log('defense maximum for ' + roomName + ' is now ' + self.memory.defenseMaximum[roomName]);
-            }
-        });
-    }
-    get defenseIncrement () {
-        return 5000;
-    }
-    prioritizeRoomGoals(goals) {
-        var self = this;
-        var indexedGoals = _.groupBy(goals, function (goal) {
-            // to give a high priority to ramparts that might go away.
-            if (goal.target.structureType == STRUCTURE_RAMPART && goal.target.hits < self.defenseIncrement) {
-                return 2;
-            } else if(self.checkIfGoalValid(goal)) {
-                return goal.meta.priority;
-            } else {
-                return 100;
-            }
-        });
-        delete indexedGoals[100];
-        return indexedGoals;
-    }
-    checkIfGoalValid(goal, deactivation) {
-        var self = this;
-        if(goal.assignments.length != 0 && !deactivation) {
-            return false;
-        }
-        if(goal.meta.priority == 5) {
-            return true;
-        }
-        if(goal.target.structureType == STRUCTURE_ROAD) {
-            if(goal.assignments.length != 0) {
+        var freeWorkers = self.getFreeWorkers();
+        var priorities = _.keys(self.memory.missions).sort();
+        _.forEach(priorities, function (priority) {
+            if(freeWorkers.length == 0) {
                 return false;
             }
-            if(deactivation) {
-                if(goal.target.hits >= goal.target.hitsMax) {
-                    return false;
-                }
-            } else {
-                if((goal.target.hits / goal.target.hitsMax) > .6) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        if(goal.target.structureType == STRUCTURE_WALL || goal.target.structureType == STRUCTURE_RAMPART) {
-            if(goal.target.hits >= self.memory.defenseMaximum[goal.roomName] || goal.target.hits >= goal.target.hitsMax) {
-                return false;
-            } else {
+            var missions = self.memory.missions[priority];
+            if(missions.length == 0) {
                 return true;
             }
-        }
-        if(_.includes([STRUCTURE_LAB,STRUCTURE_TOWER,STRUCTURE_EXTENSION,STRUCTURE_SPAWN],goal.target.structureType)) {
-            if(goal.target.energy >= goal.target.energyCapacity) {
-                return false;
-            } else {
-                return true;
-            }
-        }
-    }
-    deleteGoals() {
-        var self = this;
-        _.forEach(self.goals, function (goal) {
-            if(!Game.rooms[goal.roomName]) {
-                return true;
-            }
-            var room = Game.rooms[goal.roomName];
-            if(goal.id && !Game.getObjectById(goal.id)) {
-                self.removeGoal(goal.id);
-                return true;
-            }
-        });
-    }
-    deactivateGoals() {
-        var self = this;
-        _.forEach(self.memory.roomAssignments, function (creepNames, roomName) {
-            _.forEach(creepNames, function (creepName) {
-                var goal = self.creeps[creepName].goal;
-                var creep = self.creeps[creepName];
-                if(goal && goal.job.name == self.name && goal.target && !self.checkIfGoalValid(goal, 1)) {
-                    self.removeCreepFromGoal(creepName, goal.id);
+            _.forEach(missions, function (mission: Mission) {
+                //already enough creeps on this mission
+                if(mission.maxWorkers <= mission.creeps.length) {
+                    return true;
+                } else if(mission.maxWorkers > mission.creeps.length + freeWorkers.length) {
+                    //all remaining creeps can be assigned to this mission
+                    mission.creeps.push(..._.map(freeWorkers, function (creep) {
+                        creep.cleanup([]);
+                        self.missionGenerators[mission.missionName][mission.missionInit](creep);
+                        creep.memory.onMission = true;
+                        return creep.name;
+                    }));
+                    freeWorkers = [];
+                } else { 
+                    // assign some creeps to this mission
+                    var neededWorkers = mission.maxWorkers - mission.creeps.length;
+                    mission.creeps.push(..._.map(_.take(freeWorkers, neededWorkers), function (creep) {
+                        creep.cleanup([]);
+                        self.missionGenerators[mission.missionName][mission.missionInit](creep);
+                        creep.memory.onMission = true;
+                        return creep.name;
+                    }));
+                    freeWorkers = _.takeRight(freeWorkers, freeWorkers.length - neededWorkers);
                 }
             });
-        })
-    }
-    assignGoals() {
-        var self = this;
-        var unAssignedCreepsByRoom = _.groupBy(self.getUnassignedCreeps(), function (creep) {
-            return creep.memory.workRoom;
         });
-        _.forEach(self.memory.roomAssignments, function (creepNames, roomName) {
-            if(!unAssignedCreepsByRoom[roomName]) {
+    }
+    getFreeWorkers() : CreepClass[] {
+        var self = this;
+        return _.filter(self.creeps, function (creep) {
+            return creep.memory.onMission != true
+        });
+    }
+    runMissions () {
+        var self = this;
+        var priorities = _.keys(self.memory.missions).sort();
+        _.forEach(priorities, function (priority) {
+            var missions = self.memory.missions[priority];
+            if(missions.length == 0) {
                 return true;
             }
-            var prioritizedRoomGoals = self.prioritizeRoomGoals(self.getGoalsInRoom(roomName));
-            if(_.keys(prioritizedRoomGoals).length == 0) {
-                return true;
-            }
-            var index = 0;
-            var validPriority = 0;
-            _.forEach(unAssignedCreepsByRoom[roomName], function (creep) {
-                var validGoals = [];
-                if(!prioritizedRoomGoals[validPriority] || prioritizedRoomGoals[validPriority].length == 0) {
-                    for(var i = validPriority; i < 100; i++) {
-                        if(prioritizedRoomGoals[i]) {
-                            validGoals = prioritizedRoomGoals[i];
-                            validPriority = i;
-                            break;
-                        }
-                    }
-                    validGoals = prioritizedRoomGoals[validPriority];
-                } else {
-                    validGoals = prioritizedRoomGoals[validPriority];
+            self.memory.missions[priority] = _.filter(missions, function (mission: Mission) {
+                //no creeps on this mission
+                if(mission.creeps.length == 0) {
+                    return true;
                 }
-
-                if(validGoals.length == 0) {
-                    return false;
-                }
-                var sortedRoomGoals = _.sortBy(validGoals, function (goal) {
-                    if(creep.pos.roomName != goal.roomName) {
-                        return 50;
-                    } else {
-                        return creep.pos.getRangeTo(goal.target.pos);
-                    }
+                var missionCreeps = _.map(mission.creeps, function (creepName) {
+                    return self.creeps[creepName];
                 });
-
-                var validGoal = sortedRoomGoals.shift();
-                prioritizedRoomGoals[validPriority] = sortedRoomGoals;
-                self.assignCreepToGoal(creep.name, validGoal.id);
+                try{
+                    var result = self.missionGenerators[mission.missionName][mission.runner](mission, missionCreeps);
+                    if(result.creepsToGiveBack) {
+                        _.difference(mission.creeps, result.creepsToGiveBack);
+                        _.forEach(result.creepsToGiveBack, function (creepName) {
+                            self.creeps[creepName].memory.onMission = false;
+                        });
+                    }
+                    if(!result.continue) {
+                        _.forEach(mission.creeps, function (creepName) {
+                            self.creeps[creepName].memory.onMission = false;
+                        });
+                        self.missionGenerators[mission.missionName][mission.runner].remove(self.memory.missionGen[mission.missionName], mission);
+                    }
+                    return result.continue;
+                } catch (e) {
+                    console.log('had problems running mission: ' + JSON.stringify(mission));
+                    console.log(e.stack);
+                    debugger;
+                }
             });
+        });
+        //creeps with no mission should get outta the way;
+        _.forEach(self.getFreeWorkers(), function (creep) {
+            creep.moveOffRoad();
         });
     }
     updateRequisition () {
@@ -520,67 +507,13 @@ class roomworker extends JobClass {
             }
         });
     }
-    // this job uses roomNames as goal ids for spawning so when spawn asks this question
-    // the goalId is actually the roomName already
-    getRoomForGoal (goalId) {
-        var self = this;
-        return goalId;
-    }
-    controlWorkers () {
-        var self = this;
-        _.forEach(self.memory.roomAssignments, function (creepNames) {
-            _.forEach(creepNames, function (creepName) {
-                if(self.creeps[creepName].goal) {
-                    self.controlCreep(self.creeps[creepName]);    
-                } else {
-                    self.creeps[creepName].moveOffRoad();
-                }
-            });
-        });
-    }
-    controlCreep (myCreep) {
-        var self = this;
-        if(myCreep.energy == 0 && !myCreep.memory.gettingEnergy) {
-            myCreep.memory.arrived = 0;
-            var closestStorage = _.find(global.jobs.logistics.getStoragesAtRange(myCreep.goal.roomName, 3), function (storage) {
-                if(storage.store[RESOURCE_ENERGY] != 0) {
-                    return 1;
-                }
-                return 0;
-            });
-
-            if(!closestStorage) {
-                throw new Error('cant find a storage in range of room ' + myCreep.goal.roomName);
-            }
-            self.removeCreepFromGoal(myCreep.name, myCreep.goal.id);
-            myCreep.goal = global.jobs.logistics.goals[closestStorage.id];
-            myCreep.memory.gettingEnergy = 1;
-        } else if(myCreep.energy != 0 && myCreep.memory.gettingEnergy) {
-            myCreep.memory.arrived = 0;
-            delete myCreep.memory.gettingEnergy;
-            myCreep.cleanup(self.keeps);
-            return;
-        }
-        myCreep.navigate();
-        if(myCreep.arrived()) {
-            if(myCreep.memory.gettingEnergy) {
-                myCreep.withdraw(myCreep.goal.target, RESOURCE_ENERGY);
-            } else if(Game.constructionSites[myCreep.goal.id]) {
-                myCreep.build(myCreep.goal.target);
-            } else if(_.includes([STRUCTURE_LAB, STRUCTURE_EXTENSION, STRUCTURE_SPAWN, STRUCTURE_TOWER], myCreep.goal.target.structureType)) {
-                myCreep.transfer(myCreep.goal.target, RESOURCE_ENERGY);
-            } else {
-                myCreep.repair(myCreep.goal.target);
-            }
-        }
-    }
 }
 
 interface Mission {
+    missionName: string,
     maxWorkers: number,
     runner: string,
     missionInit: string,
-    goals: string[],
     creeps: string[],
     priority: number,
     other: any
