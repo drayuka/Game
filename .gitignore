@@ -1,9 +1,9 @@
 
 Gruntfile.js
-node_modules/**/*
-!node_modules/@types/screeps/index.d.ts
-typings/**/*
-dist/**/*
+/node_modules/*
+!/node_modules/@types/screeps/index.d.ts
+/typings/*
+/dist/*
 
 *.sublime-workspace
 *.DS_Store
