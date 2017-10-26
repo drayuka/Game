@@ -120,7 +120,7 @@ class CreepClass extends Creep {
             id: goal.id,
             roomName: goal.roomName,
             meta: goal.meta
-        }
+        };
         self.memory.arrived = 0;
     }
     get path () {
