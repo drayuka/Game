@@ -1,7 +1,6 @@
 
 Gruntfile.js
 /node_modules/*
-!/node_modules/@types/screeps/index.d.ts
 /typings/*
 /dist/*
 
