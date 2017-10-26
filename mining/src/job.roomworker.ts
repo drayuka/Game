@@ -321,10 +321,14 @@ class roomworker extends JobClass {
                     missionMem.missions = {};
                     missionMem.roomDefenseLimits = {};
                     missionMem.lastCheck = {};
+                    missionMem.lastDefenseCompletion = {};
+                    missionMem.lastDefenseRaise = {};
                 },
                 new: function (missionMem: any, rooms: string[]) : Mission[] {
+                    var newMissions : Mission[] = [];
                     _.forEach(rooms, function (roomName) {
                         var room = Game.rooms[roomName];
+                        // cant see the room, i don't even
                         if(!room) {
                             return true;
                         }
@@ -333,13 +337,71 @@ class roomworker extends JobClass {
                             return true;
                         }
                         if(missionMem.lastCheck + 1000 > Game.time) {
-
+                            return true;
                         }
+                        missionMem.lastCheck = Game.time;
 
-                        var 
+                        // already have a mission to up the def in this room;
+                        if(missionMem.missions[roomName]) {
+                            return true;
+                        }
+                        if(!missionMem.roomDefenseLimits[roomName]) {
+                            missionMem.roomDefenseLimits[roomName] = 100000;
+                            //only upgrade defense maximums if:
+                            //1. it is lower than 10 million
+                            //2. we haven't done it in ~1 day 
+                            //3. we have completed at least one mission for this room since the last time we raised it
+                        } else if (missionMem.roomDefenseLimits[roomName] < 10000000 
+                            && missionMem.lastDefenseRaise[roomName] + 30000 < Game.time 
+                            && missionMem.lastDefenseCompletion[roomName] > missionMem.lastDefenseRaise[roomName]) {
+                            // if we're maxed at controller level, start building defenses more readily
+                            if(room.controller.level == 8) {
+                                missionMem.roomDefenseLimits[roomName] += 500000;
+                            }
+                            missionMem.roomDefenseLimits[roomName] += 100000;
+                        }
+                        // if any of our defenses are critically low, raise the priority
+                        var emergency = false;
+                        var defSites : Structure[]= <Structure[]>room.find(FIND_STRUCTURES, {filter: function (struct: Structure) {
+                            if(struct.structureType != STRUCTURE_RAMPART && struct.structureType != STRUCTURE_WALL) {
+                                return false;
+                            }
+                            if(struct.hits < missionMem.roomDefenseLimits[roomName] *.9) {
+                                return true;
+                            }
+                            if(struct.hits < 100000) {
+                                emergency = true;
+                                return true;
+                            }
+                            return false;
+                        }});
+
+                        var priority = 3;
+                        if(emergency) {
+                            priority = 1;
+                        }
+                        newMissions.push({
+                            missionName: 'upgradeWallsAndRamparts',
+                            maxWorkers: Infinity,
+                            runner: 'runMission',
+                            missionInit: 'creepMissionInit',
+                            creeps: [],
+                            priority: priority,
+                            other: {
+                                roomName: roomName,
+                                defSites: _.pluck(defSites, 'id')
+                            }
+                        });
+                        missionMem.missions[roomName] = true;
+
+                        // only check 1 room a tick
+                        return false;
                     });
+                    return newMissions;
                 },
                 remove: function (missionMem: any, mission: Mission) {
+                    delete missionMem.missions[mission.other.roomName];
+                    missionMem.lastDefenseCompletion[mission.other.roomName] = Game.time;
 
                 },
                 runMission: function (mission: Mission, creeps: CreepClass[]) {
@@ -486,26 +548,20 @@ class roomworker extends JobClass {
     }
     updateRequisition () {
         var self = this;
-        _.forEach(self.memory.roomAssignments, function (creepNames, roomName) {
+        var creepsToSpawn = _.reduce(self.rooms, function (roomName, total) {
             var room = Game.rooms[roomName];
             if(!room) {
-                return true;
+                return total;
             }
-            if(self.getGoalsInRoom(roomName).length == 0) {
-                return true;
+            if(room.controller && room.controller.owner && room.controller.owner.username != global.username) {
+                return total;
             }
-            var maxCreeps = 1;
-            var maxCreepSize = 2;
-            if(room.controller.my) {
-                maxCreepSize = 6;
+            if(room.controller && room.controller.my) {
+                return total + 1.5;
             }
-            if(room.controller.level >= 7) {
-                maxCreeps = 2;
-            }
-            if(creepNames.length < maxCreeps) {
-                global.jobs.spawn.addRequisition(self.name, 'roomworker', maxCreepSize, roomName, {});
-            }
-        });
+            return total + .5;
+        },0);
+        self.jobs.spawn.addRequisition(self.name, 'roomworker', 6, self.parentClaim, {});
     }
 }
 
