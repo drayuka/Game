@@ -357,8 +357,9 @@ class roomworker extends JobClass {
                             // if we're maxed at controller level, start building defenses more readily
                             if(room.controller.level == 8) {
                                 missionMem.roomDefenseLimits[roomName] += 500000;
+                            } else {
+                                missionMem.roomDefenseLimits[roomName] += 100000;  
                             }
-                            missionMem.roomDefenseLimits[roomName] += 100000;
                         }
                         // if any of our defenses are critically low, raise the priority
                         var emergency = false;
@@ -389,7 +390,8 @@ class roomworker extends JobClass {
                             priority: priority,
                             other: {
                                 roomName: roomName,
-                                defSites: _.pluck(defSites, 'id')
+                                defSites: _.pluck(defSites, 'id'),
+                                takenSites: []
                             }
                         });
                         missionMem.missions[roomName] = true;
@@ -402,13 +404,37 @@ class roomworker extends JobClass {
                 remove: function (missionMem: any, mission: Mission) {
                     delete missionMem.missions[mission.other.roomName];
                     missionMem.lastDefenseCompletion[mission.other.roomName] = Game.time;
-
                 },
                 runMission: function (mission: Mission, creeps: CreepClass[]) {
+                    _.forEach(creeps, function (creep) {
+                        if(creep.memory.missionStatus.gettingEnergy) {
+                            if(self.getEnergy(creep)) {
+                                creep.memory.missionStatus.gettingEnergy = false;
+                            }
+                        } else if(creep.memory.missionStatus.repairingDefense) {
+                            if(!creep.memory.missionStatus.target) {
+                                var availableSites = _.difference(mission.defSites, mission.takenSites);
+                                // there are available sites which are not being repaired by another creep
+                                if(availableSites.length > 0) {
 
+                                }
+                            }
+
+                        } else {
+                            if(creep.carry[RESOURCE_ENERGY] == creep.carryCapacity) {
+                                creep.memory.missionStatus.repairingDefense = true;
+                            } else {
+                                creep.memory.missionStatus.gettingEnergy = true;
+                            }
+                        }
+                    });
                 },
                 creepMissionInit: function (creep: CreepClass) : void {
-
+                    creep.memory.missionStatus = {
+                        gettingEnergy : false,
+                        repairingDefense : false,
+                        target: undefined
+                    };
                 }
             }
         }
