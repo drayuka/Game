@@ -200,7 +200,7 @@ class roomworker extends JobClass {
                         if(!room) {
                             return;
                         }
-                        var newBuildSites: ConstructionSite[] = room.find(FIND_MY_CONSTRUCTION_SITES, {filter: function (site) {
+                        var newBuildSites: ConstructionSite[] = room.find(FIND_MY_CONSTRUCTION_SITES, {filter: function (site: ConstructionSite) {
                             if(missionMem.missions[site.id]) {
                                 return false;
                             } 
@@ -248,14 +248,14 @@ class roomworker extends JobClass {
                         // if this is a rampart or wall we need to build it up a bit, before we let other jobs deal with it
                         if(mission.other.type == STRUCTURE_RAMPART || mission.other.type == STRUCTURE_WALL) {
                             if(mission.other.defSite) {
-                                defSite = Game.getObjectById(mission.other.defSite);
+                                defSite = <Structure>Game.getObjectById(mission.other.defSite);
                                 if(!defSite) {
                                     throw new Error('couldnt find the ' + mission.other.type + ' at ' + JSON.stringify(mission.other.pos));
                                 }
                                 // defense site is high enough, we can build it up normally;
                                 if(defSite.hits > 10000) {
                                     return {
-                                        continue: false;
+                                        continue: false
                                     }
                                 }
                             } else {
@@ -271,7 +271,7 @@ class roomworker extends JobClass {
                             }
                         } else {
                             return {
-                                continue: false;
+                                continue: false
                             }
                         }
                     }
@@ -305,14 +305,14 @@ class roomworker extends JobClass {
                         }
                     });
                     return {
-                        creepsToGiveBack: doneCreeps;
+                        creepsToGiveBack: doneCreeps,
                         continue: true
                     }
                 },
                 creepMissonInit: function (creep: CreepClass) {
                     creep.memory.missionStatus = {
                         gettingEnergy : false,
-                        buildingStructure : false,
+                        buildingStructure : false
                     };
                 }
             },
@@ -376,6 +376,9 @@ class roomworker extends JobClass {
                             }
                             return false;
                         }});
+                        if(defSites.length = 0) {
+                            return false;
+                        }
 
                         var priority = 3;
                         if(emergency) {
@@ -391,7 +394,8 @@ class roomworker extends JobClass {
                             other: {
                                 roomName: roomName,
                                 defSites: _.pluck(defSites, 'id'),
-                                takenSites: []
+                                takenSites: {},
+                                targetHits: missionMem.roomDefenseLimits[roomName]
                             }
                         });
                         missionMem.missions[roomName] = true;
@@ -406,6 +410,22 @@ class roomworker extends JobClass {
                     missionMem.lastDefenseCompletion[mission.other.roomName] = Game.time;
                 },
                 runMission: function (mission: Mission, creeps: CreepClass[]) {
+                    var removeSites : string[] = [];
+                    var doneCreeps : string[] = [];
+                    _.forEach(creeps, function (creep) {
+                        if(!creep.memory.missionStatus.target) {
+                            return true;
+                        }
+                        var defObj = <Structure>Game.getObjectById(creep.memory.missionStatus.target);
+                        if(defObj.hits > mission.other.targetHits) {
+                            removeSites.push(defObj.id);
+                            creep.memory.missionStatus.target = undefined;
+                        }
+                    });
+                    mission.other.defSites = _.difference(mission.other.defSites, removeSites);
+                    if(mission.other.defSites.length == 0) {
+                        return {continue: false};
+                    }
                     _.forEach(creeps, function (creep) {
                         if(creep.memory.missionStatus.gettingEnergy) {
                             if(self.getEnergy(creep)) {
@@ -413,13 +433,41 @@ class roomworker extends JobClass {
                             }
                         } else if(creep.memory.missionStatus.repairingDefense) {
                             if(!creep.memory.missionStatus.target) {
-                                var availableSites = _.difference(mission.defSites, mission.takenSites);
+                                var availableSites = _.difference(mission.other.defSites, _.keys(mission.other.takenSites));
+                                var closestSite;
                                 // there are available sites which are not being repaired by another creep
                                 if(availableSites.length > 0) {
+                                    closestSite = _.sortBy(availableSites, function (site : string) {
+                                        var siteObj = <Structure>Game.getObjectById(site);
 
+                                        if(siteObj.hits >= mission.other.targetHits) {
+                                            return 51;
+                                        }
+                                        return siteObj.pos.getRangeTo(creep.pos);
+                                    })[0];
+                                    //all sites are being repaired
+                                } else {
+                                    closestSite = _.sortBy(mission.other.defSites, function (site : string) {
+                                        var siteObj = <Structure>Game.getObjectById(site);
+                                        if(siteObj.hits >= mission.other.targetHits) {
+                                            return 51;
+                                        }
+                                        return siteObj.pos.getRangeTo(creep.pos);
+                                    })[0];
                                 }
+                                creep.memory.missionStatus.target = closestSite;
+                                creep.goal = new GoalClass(undefined, mission.other.roomName, creep.memory.missionStatus.target, {halts: true, range: 3});
+                            }
+                            if(creep.arrived()) {
+                                var defObj = <Structure>Game.getObjectById(creep.memory.missionStatus.target);
+                                creep.repair(defObj);
+                            } else {
+                                creep.navigate();
                             }
 
+                            if(creep.carry[RESOURCE_ENERGY] == 0) {
+                                doneCreeps.push(creep.name);
+                            }
                         } else {
                             if(creep.carry[RESOURCE_ENERGY] == creep.carryCapacity) {
                                 creep.memory.missionStatus.repairingDefense = true;
@@ -428,6 +476,10 @@ class roomworker extends JobClass {
                             }
                         }
                     });
+                    return {
+                        creepsToGiveBack: doneCreeps,
+                        continue: true
+                    };
                 },
                 creepMissionInit: function (creep: CreepClass) : void {
                     creep.memory.missionStatus = {
@@ -446,7 +498,7 @@ class roomworker extends JobClass {
         }
         if(!creep.memory.navigatingToEnergy) {
             creep.memory.arrived = false;
-            var closestStorage = _.find(self.jobs.logistics.getStoragesAtRange(creep.goal.roomName, 3), function (storage: StructureStorage) {
+            var closestStorage = <Structure>_.find(self.jobs.logistics.getStoragesAtRange(creep.goal.roomName, 3), function (storage: StructureStorage) {
                 if(storage.store[RESOURCE_ENERGY] != 0) {
                     return 1;
                 }
@@ -454,7 +506,7 @@ class roomworker extends JobClass {
             });
 
             if(!closestStorage) {
-                throw new Error('cant find a storage in range of room ' + myCreep.goal.roomName);
+                throw new Error('cant find a storage in range of room ' + creep.goal.roomName);
             }
             creep.memory.navigatingToEnergy = true;
             creep.goal = self.jobs.logistics.goals[closestStorage.id];
@@ -574,7 +626,7 @@ class roomworker extends JobClass {
     }
     updateRequisition () {
         var self = this;
-        var creepsToSpawn = _.reduce(self.rooms, function (roomName, total) {
+        var creepsToSpawn = _.reduce(self.rooms, function (total, roomName) {
             var room = Game.rooms[roomName];
             if(!room) {
                 return total;
