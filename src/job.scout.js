@@ -57,7 +57,7 @@ class scout extends JobClass {
             if(goal.assignments.length != 0) {
                 return true;
             }
-            global.jobs.spawn.addRequisition(self.name, 'scout', 1, goal.id, {});
+            self.jobs.spawn.addRequisition(self.name, 'scout', 1, goal.id, {});
         });
     }
     get observers () {

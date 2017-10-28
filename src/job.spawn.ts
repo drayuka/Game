@@ -281,7 +281,7 @@ class spawnJob extends JobClass {
             self.removeCreep(creep.name);
             var creepType = creepTypes[creep.memory.type];
             var spawnedPower = creep.partCount(creepType.powerPart);
-            global.jobs[jobName].addCreep(creep.name);
+            self.jobs[jobName].addCreep(creep.name);
             if(!self.memory.requisitions[jobName][goalId]) {
                 return;
             }
@@ -505,8 +505,11 @@ class spawnJob extends JobClass {
             var currentCost = self.currentCost[roomName] ? self.currentCost[roomName] : 0;
             var capacityAvailable = room.capacityAvailable;
             var energyAvailable = Game.rooms[roomName].energyAvailable - currentCost;
-            if(global.jobs.roomworker.memory.roomAssignments[roomName]) {
-                var roomWorkers = global.jobs.roomworker.memory.roomAssignments[roomName].length;
+            //////////
+            /////// FIX ME
+            ////////
+            if(self.jobs.roomworker.memory.roomAssignments[roomName]) {
+                var roomWorkers = self.jobs.roomworker.memory.roomAssignments[roomName].length;
                 if(roomWorkers == 0) {
                     capacityAvailable = Math.max(energyAvailable, 300);
                 }
@@ -675,7 +678,7 @@ class spawnJob extends JobClass {
                         jobName: jobName,
                         priority: priority,
                         goalId: goalId,
-                        roomName: global.jobs[jobName].getRoomForGoal(goalId)
+                        roomName: self.jobs[jobName].getRoomForGoal(goalId)
                     }
                 }
             });

@@ -55,7 +55,7 @@ class reserve extends JobClass {
             if(goal.assignments.length != 0 || (goal.target && goal.target.reservation && goal.target.reservation.ticksToEnd > 4000)) {
                 return true;
             }
-            global.jobs.spawn.addRequisition(self.name, 'claim', 2, goal.id, {});
+            self.jobs.spawn.addRequisition(self.name, 'claim', 2, goal.id, {});
         });
     }
     controlWorkers() {

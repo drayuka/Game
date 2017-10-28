@@ -123,7 +123,7 @@ class JobClass {
         var rgoal = self._goals[goalId];
         delete self._goals[goalId];
         delete self.memory.goals[rgoal.roomName][goalId];
-        global.jobs.spawn.removeRequisition(self.name, goalId);
+        self.jobs.spawn.removeRequisition(self.name, goalId);
     }
     set creeps(creeps) {
         var self = this;

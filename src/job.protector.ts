@@ -114,7 +114,7 @@ class protectorJob extends JobClass {
             if(goal.meta.hostileCreeps.length == 0) {
                 return true;
             }
-            global.jobs.spawn.addRequisition(self.name, 'warrior', 8, goal.id, {});
+            self.jobs.spawn.addRequisition(self.name, 'warrior', 8, goal.id, {});
         });
     }
     controlWarriors() {

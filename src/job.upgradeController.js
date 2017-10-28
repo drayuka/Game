@@ -60,7 +60,7 @@ class upgradeController extends JobClass {
                     goal.permanentPositions = positions;
                     goal.meta.storage = sites[0].id;
                     if(sites[0].structureType != STRUCTURE_STORAGE) {
-                        global.jobs.logistics.addNode(goal.meta.storage, 'sink', 15);
+                        self.jobs.logistics.addNode(goal.meta.storage, 'sink', 15);
                     }
                 }
             }
@@ -119,9 +119,9 @@ class upgradeController extends JobClass {
         var buffer;
         if(goal.meta.linkStorage) {
             var room = Game.rooms[goal.roomName];
-            buffer = global.jobs.logistics.getUsableStorageAmountForGoal(room.storage.id);
+            buffer = self.jobs.logistics.getUsableStorageAmountForGoal(room.storage.id);
         } else {
-            buffer = global.jobs.logistics.getUsableStorageAmountForGoal(goal.meta.storage);
+            buffer = self.jobs.logistics.getUsableStorageAmountForGoal(goal.meta.storage);
         }
         var desiredWork = Math.floor(buffer / self.bufferPerWork);
         if(desiredWork > 15 && goal.target.level == 8) {
@@ -144,7 +144,7 @@ class upgradeController extends JobClass {
             }
 
             if(!goal.meta.linkStorage) {
-                var logisticsGoal = global.jobs.logistics.goals[goal.meta.storage];
+                var logisticsGoal = self.jobs.logistics.goals[goal.meta.storage];
                 if(logisticsGoal.assignments.length != 0) {
                     _.forEach(logisticsGoal.assignments, function (creepName) {
                         global.creeps[creepName].suicide();
@@ -154,16 +154,16 @@ class upgradeController extends JobClass {
 
 
             var desiredPower = self.getUpgradePowerForUpgradeGoal(goal);
-            var maxPower = global.jobs.spawn.getMaxPowerForRoom('heavyworker', goal.roomName);
+            var maxPower = self.jobs.spawn.getMaxPowerForRoom('heavyworker', goal.roomName);
             if(desiredPower > 2 * maxPower) {
                 desiredPower = 2 * maxPower;
             }
             if(desiredPower == 0) {
                 desiredPower = 1;
             }
-            global.jobs.spawn.addRequisition(self.name, 'heavyworker', desiredPower, goal.id, {});
+            self.jobs.spawn.addRequisition(self.name, 'heavyworker', desiredPower, goal.id, {});
             if(!goal.meta.linkStorage) {
-                global.jobs.logistics.setEPTForGoal(goal.meta.storage, desiredPower);
+                self.jobs.logistics.setEPTForGoal(goal.meta.storage, desiredPower);
             }
             goal.meta.requested = desiredPower;
         });

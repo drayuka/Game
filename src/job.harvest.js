@@ -40,7 +40,7 @@ class harvest extends JobClass {
                 if(sites.length != 0) {
                     goal.meta.storage = sites[0].id;
                     goal.meta.dropHarvest = true;
-                    global.jobs.logistics.addNode(goal.meta.storage, 'source', 10);
+                    self.jobs.logistics.addNode(goal.meta.storage, 'source', 10);
                 }
             }
             // if we didn't get the storage in the last check, look for a construction site
@@ -132,7 +132,7 @@ class harvest extends JobClass {
             if(curWorkPower >= 6) {
                 return true;
             }
-            global.jobs.spawn.addRequisition(self.name, 'heavyworker', 6, goal.id, {});
+            self.jobs.spawn.addRequisition(self.name, 'heavyworker', 6, goal.id, {});
         });
     }
 }

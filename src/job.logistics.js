@@ -204,7 +204,7 @@ class logistics extends JobClass {
                 }, 0));
             }, 0);
             if(capacity > curCapacity) {
-                global.jobs.spawn.addRequisition(self.name, 'transporter', (capacity - curCapacity), goal.id, {});
+                self.jobs.spawn.addRequisition(self.name, 'transporter', (capacity - curCapacity), goal.id, {});
             }
         });
     }

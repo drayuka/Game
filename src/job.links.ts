@@ -113,7 +113,7 @@ class links extends JobClass {
         var room = Game.rooms[roomName];
         var roomLinkInfo = self.memory.rooms[roomName];
         var closePositions = utils.openPositionsAround([{pos: room.controller.pos, minRange: 2, maxRange:2}], {noRoads: true});
-        var closePositions = _.sortBy(closePositions, function (pos) {
+        closePositions = _.sortBy(closePositions, function (pos) {
             var posClosePositions = utils.openPositionsAround([{pos: pos, range: 1}], {noRoads: true});
             var distance;
             if(roomLinkInfo.storageLink.link) {
@@ -126,12 +126,12 @@ class links extends JobClass {
         });
         if(closePositions.length != 0) {
             var buildSpot = closePositions[0];
-            var upgradeGoal = global.jobs.upgrade.goals[room.controller.id];
+            var upgradeGoal = self.jobs.upgrade.goals[room.controller.id];
             if(upgradeGoal.meta.storage) {
                 var oldStorage = Game.getObjectById(upgradeGoal.meta.storage);
                 oldStorage.destroy();
-                var logisticsGoal = global.jobs.logistics.goals[oldStorage.id];
-                global.jobs.logistics.removeGoal(logisticsGoal.id);
+                var logisticsGoal = self.jobs.logistics.goals[oldStorage.id];
+                self.jobs.logistics.removeGoal(logisticsGoal.id);
                 delete upgradeGoal.meta.storage;
             }
             var surroundingPositions = utils.openPositionsAround([{pos: buildSpot, range: 1}], {noRoads: true});
@@ -202,10 +202,10 @@ class links extends JobClass {
         if(!roomInfo.sourceLinks) {
             roomInfo.sourceLinks = {};
         }
-        var harvestGoal = global.jobs.harvest.goals[sourceId];
+        var harvestGoal = self.jobs.harvest.goals[sourceId];
         harvestGoal.permanentPositions = [harvestSpot];
         if(harvestGoal.meta.storage) {
-            global.jobs.logistics.removeGoal(harvestGoal.meta.storage);
+            self.jobs.logistics.removeGoal(harvestGoal.meta.storage);
             Game.getObjectById(harvestGoal.meta.storage).destroy();
             delete harvestGoal.meta.storage;
         }
@@ -241,7 +241,7 @@ class links extends JobClass {
                     delete roomInfo.upgradeLink.linkBuild;
                     roomInfo.upgradeLink.link = globalBuild.getStructure().id;
                     var controller = Game.rooms[roomName].controller;
-                    var upgradeGoal = global.jobs.upgrade.goals[controller.id];
+                    var upgradeGoal = self.jobs.upgrade.goals[controller.id];
                     delete upgradeGoal.meta.constructingLinkStorage;
                     upgradeGoal.meta.storage = globalBuild.getStructure().id;
                     upgradeGoal.meta.linkStorage = true;
@@ -254,11 +254,11 @@ class links extends JobClass {
                     if(globalBuild.isFinished) {
                         delete sourceLink.linkBuild;
                         sourceLink.link = globalBuild.getStructure().id;
-                        var harvestGoal = global.jobs.harvest.goals[sourceId];
+                        var harvestGoal = self.jobs.harvest.goals[sourceId];
                         delete harvestGoal.meta.constructingStorage;
                         harvestGoal.meta.storage = globalBuild.getStructure().id;
                     } else if(globalBuild.getBuild()) {
-                        var harvestGoal = global.jobs.harvest.goals[sourceId];
+                        var harvestGoal = self.jobs.harvest.goals[sourceId];
                         if(!harvestGoal.meta.constructingStorage) {
                             harvestGoal.meta.constructingStorage = globalBuild.getBuild().id;
                         }
@@ -273,7 +273,7 @@ class links extends JobClass {
             if(goal.assignments.length != 0) {
                 return true;
             }
-            global.jobs.spawn.addRequisition(self.name, 'transporter', 16, goal.id, {});
+            self.jobs.spawn.addRequisition(self.name, 'transporter', 16, goal.id, {});
         });
     }
     controlLinks() {
