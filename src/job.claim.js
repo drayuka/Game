@@ -55,7 +55,7 @@ class claim extends JobClass {
             if(goal.assignments.length != 0) {
                 return true;
             }
-            global.jobs.spawn.addRequisition(self.name, 'claim', 1, goal.id, {});
+            self.jobs.spawn.addRequisition(self.name, 'claim', 1, goal.id, {});
         });
     }
     controlWorkers() {
