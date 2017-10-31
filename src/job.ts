@@ -87,13 +87,6 @@ class JobClass {
         self._goals = <GoalList>_.indexBy(myGoals, function (sgoal) { return sgoal.id; });
         return self._goals;
     }
-    set goals(goals) {
-        var self = this;
-        throw new Error('you should not be setting goals directly anymore, only adding or removing them');
-    }
-    addGoals () {
-        throw new Error('deprecated');
-    }
     addGoal (roomName: string, target: RoomObject | string, meta: any) {
         var self = this;
         if(!meta) {
@@ -108,10 +101,6 @@ class JobClass {
         }
         _.set(self.memory, 'goals.' + ngoal.roomName + '.' + ngoal.id, ngoal.meta);
     }
-    removeGoals () {
-        throw new Error('deprecated');
-    }
-    // this code is replicated in job.logisitics, if you make changes here, make changes there, if neccesary
     removeGoal(goalId: string) {
         var self = this;
         if(!self.goals[goalId]) {
@@ -123,11 +112,7 @@ class JobClass {
         var rgoal = self._goals[goalId];
         delete self._goals[goalId];
         delete self.memory.goals[rgoal.roomName][goalId];
-        self.jobs.spawn.removeRequisition(self.name, goalId);
-    }
-    set creeps(creeps) {
-        var self = this;
-        throw new Error('you should not be setting all creeps, only adding or removing');
+        self.jobs.spawn.removeRequisition(self.name, self.parentClaim, goalId);
     }
     get creeps() {
         var self = this;
@@ -171,9 +156,6 @@ class JobClass {
     getRoomForGoal (goalId: string) {
         var self = this;
         return self.goals[goalId].roomName;
-    }
-    removeCreeps () {
-        throw new Error('deprecated use removeCreep instead');
     }
     removeCreep(creepName: string) {
         var self = this;

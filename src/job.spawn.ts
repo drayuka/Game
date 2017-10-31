@@ -16,6 +16,7 @@ var partPriority = {
     claim: 7,
     heal: 8
 };
+
 var jobPriority : jobPriorities = {
     roomworker: 1,
     harvest: 2,
@@ -76,6 +77,16 @@ interface collapsedRequisition {
         goalId: string,
         roomName: string   
     }
+}
+
+interface creepDescription {
+    power: number,
+    type: string,
+    memory: any,
+    id: any,
+    jobName: string,
+    parentClaim: string,
+    waitingSince: number
 }
 
 
@@ -210,86 +221,75 @@ class spawnJob extends JobClass {
             return self.memory.requisitions;
         } else {
             return self._requisitions;
-        }    
+        }
     }
-
-    addRequisition(jobName: string, creepType: string, power: number, goalId: string, memory: any) {
+    addRequisition(creepDescriptions: creepDescription[]) {
         var self = this;
-        if (!self.memory.requisitions) {
+        if(!self.memory.requisitions) {
             self.memory.requisitions = {};
         }
         var found = 0;
-        if(!self.requisitions[jobName]) {
-            self.requisitions[jobName] = {};
-        }
-        var jobRequisitions = self.memory.requisitions[jobName];
-        var curRequisition = jobRequisitions[goalId];
-        if(curRequisition && power != curRequisition.power) {
-            if(power > 0) {
-                curRequisition.power = power;        
-            } else {
-                delete jobRequisitions[goalId];
-                return;
+
+        _.forEach(creepDescriptions, function (creepDesc: creepDescription) {
+            var parentClaim = creepDesc.parentClaim;
+            var jobName = creepDesc.jobName;
+            var jobRequisitions = self.memory.requisitions[parentClaim][jobName];
+            if(!self.requisitions[parentClaim]) {
+                self.requisitions[parentClaim] = {};
             }
-        }
-        if(!curRequisition) {
-            jobRequisitions[goalId] = {
-                typeName: creepType,
-                power: power,
-                memory: memory
-            };
-        }
+            if(!self.requisitions[parentClaim][jobName]) {
+                self.requisitions[parentClaim][jobName] = {};
+            }
+            var curRequisition = jobRequisitions[creepDesc.id];
+            if(curRequisition && curRequisition.power != creepDesc.power) {
+                if(creepDesc.power > 0) {
+                    curRequisition.power = creepDesc.power;        
+                } else {
+                    delete jobRequisitions[creepDesc.id];
+                    return;
+                }
+            } else if(!curRequisition) {
+                jobRequisitions[creepDesc.id] = creepDesc;
+            }
+        });
     }
-    haveRequisition(jobName: string, creepType: string, goalId: string) {
-        var self = this;
-        if(!self.memory.requisitions) {
-            return false;
-        }
-        if(!self.memory.requisitions[jobName]) {
-            return false;
-        }
-        var jobRequisitions = self.memory.requisitions[jobName];
-        var curRequisition = jobRequisitions[goalId];
-        if(curRequisition) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-    removeRequisition(jobName: string, goalId: string) {
+    removeRequisition(jobName: string, parentClaim: string, goalId: string) {
         var self = this;
         if(!self.memory.requisitions) {
             return;
         }
-        if(!self.memory.requisitions[jobName]) {
+        if(!self.memory.requisitions[parentClaim]) {
             return;
         }
-        delete self.memory.requisitions[jobName][goalId];
+        if(!self.memory.requisitions[parentClaim][jobName]) {
+            return;
+        }
+        delete self.memory.requisitions[parentClaim][jobName][goalId];
     }
     giveCreeps() {
         var self = this;
-        var spawnedCreeps = _.filter(self.creeps, function (creep) {
-            if(!creep.spawning) {
-                return 1;
-            }
-            return 0;
+        var spawnedCreeps : CreepClass[] = _.filter(self.creeps, function (creep) {
+            return !creep.spawning
         });
         _.forEach(spawnedCreeps, function (creep) {
             var jobName = creep.memory.destinationJobName;
-            var goalId = creep.memory.goal;
+            var parentClaim = creep.memory.parentClaim;
+            var id = creep.memory.id;
             delete creep.memory.destinationJobName;
+            delete creep.memory.parentClaim;
             self.removeCreep(creep.name);
             var creepType = creepTypes[creep.memory.type];
             var spawnedPower = creep.partCount(creepType.powerPart);
-            self.jobs[jobName].addCreep(creep.name);
-            if(!self.memory.requisitions[jobName][goalId]) {
+            global.bootstrap.claimedRooms[parentClaim].jobs[jobName].addCreep(creep.name);
+
+            if(!self.memory.requisitions[parentClaim][jobName][id]) {
                 return;
             }
-            var remainingPower = self.memory.requisitions[jobName][goalId].power - spawnedPower;
+            var remainingPower = self.memory.requisitions[parentClaim][jobName][id].power - spawnedPower;
             if(remainingPower <= 0) {
-                delete self.memory.requisitions[jobName][goalId];
+                delete self.memory.requisitions[parentClaim][jobName][id];
             } else {
-                self.memory.requisitions[jobName][goalId].power = remainingPower;
+                self.memory.requisitions[parentClaim][jobName][id].power = remainingPower;
             }
         });
     }
@@ -308,7 +308,6 @@ class spawnJob extends JobClass {
         if(!myCreep) {
             throw new Error('could not find creep to add ' + creepName);
         }
-        myCreep.job = self;
         self.memory.creeps.push(creepName);
         if(self._creeps) {
             self._creeps[creepName] = myCreep;
@@ -416,11 +415,12 @@ class spawnJob extends JobClass {
         }
         
     }
-    spawn(spawn: StructureSpawn, typeName: string, power: number, jobName: string, goalId: string, memory: any) {
+    spawn(spawn: StructureSpawn, creepDesc: creepDescription) {
         var self = this;
-        var creepType = creepTypes[typeName];
+        var creepType = creepTypes[creepDesc.type];
+        var power = creepDesc.power;
         var requiredParts = _.cloneDeep(creepType.required_parts);
-        var minPower = self.minPower(typeName);
+        var minPower = self.minPower(creepDesc.type);
         if(power % minPower != 0) {
             power = power + (power % minPower);
         }
@@ -432,10 +432,11 @@ class spawnJob extends JobClass {
             finalParts = _.flatten([requiredParts, parts]);
         }
         var sortedFinalParts = self.sortParts(finalParts);
-        memory.type = typeName;
-        memory.destinationJobName = jobName;
+        var memory = _.cloneDeep(creepDesc.memory);
+        memory.type = creepDesc.type;
+        memory.destinationJobName = creepDesc.jobName;
         memory.jobName = 'spawn';
-        memory.goal = goalId;
+        memory.goal = creepDesc.id;
         return spawn.createCreep(sortedFinalParts, undefined, memory);
     }
     sortParts(parts: BodyPartConstant[]) : BodyPartConstant[] {
@@ -546,10 +547,61 @@ class spawnJob extends JobClass {
             return 1;
         });
     }
-    logSuccessfulSpawn(spawn: StructureSpawn, cost: number) {
+    findAvailableSpawnsInRoom (roomName: string) : StructureSpawn[] {
         var self = this;
-        self.justStartedSpawning[spawn.id] = true;
-        self.currentCost[spawn.pos.roomName] += cost;
+        return _.filter(Game.spawns, function (spawn) {
+            if(spawn.pos.roomName != roomName) {
+                return false;
+            }
+            if(spawn.spawning) {
+                return false;
+            }
+            return true;
+        });
+    }
+    spawnCreeps() {
+        var self = this;
+        _.forEach(self.memory.requisitions, function (jobReqs: any, parentClaim: string) {
+            var parentClaimRoom = Game.rooms[parentClaim];
+            // if we can't see the parent claim, something is screwed, stop spawning for it.
+            if(!parentClaimRoom) {
+                return true;
+            }
+            var availableEnergy = parentClaimRoom.energyAvailable;
+            var capacityAvailable = parentClaimRoom.energyCapacityAvailable;
+            var availableSpawns = self.findAvailableSpawnsInRoom(parentClaim);
+
+            _.forEach(_.sortBy(jobReqs, function (req, jobName) {
+                return jobPriority[jobName];
+            }), function (goalReqs) {
+                _.forEach(goalReqs, function (creepDesc: creepDescription, id: string) {
+                    // can't spawn right now
+                    if(!availableSpawns) {
+                        self.checkMoveReq(creepDesc);
+                    }
+                    var cost = self.costForPower(creepDesc.type, creepDesc.power);
+                    // can never spawn in this room
+                    if(cost > capacityAvailable) {
+
+                    }
+                    // can't spawn right now
+                    if(availableEnergy < cost) {
+
+                    }
+
+                    var result = self.spawn(availableSpawns[0], creepDesc);
+                    if(typeof result == 'string') {
+                        availableEnergy -= cost;
+                        availableSpawns.shift();
+                    } else {
+                        console.log('couldnt spawn ' + JSON.stringify(creepDesc) + ' got error: ' + result);
+                    }
+                });
+            });
+        });
+    }
+    checkMoveReq(creepDesc: creepDescription) {
+        var self = this;
     }
     spawnCreeps() {
         var self = this;
