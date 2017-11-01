@@ -22,33 +22,29 @@ var initialize = function () {
     if(!Memory.jobs) {
         Memory.jobs = {};
     }
-    // if we haven't created our new creep objects, create them, otherwise, do not.
-    if(!global.creeps) {
-        var creepObjs = _.map(Game.creeps, function (creep) {
-            try {
-                var newCreep = new CreepClass(creep);
-                return newCreep;
-            } catch (e) {
-                console.log('had the following error when spinning up creeps:');
-                console.log(e.stack);
-                debugger;        
-            }
-        });
-        global.creeps = _.indexBy(creepObjs, function (creepobj) {
-            return creepobj.name;
-        });
-    }
+    var creepObjs = _.map(Game.creeps, function (creep) {
+        try {
+            var newCreep = new CreepClass(creep);
+            return newCreep;
+        } catch (e) {
+            console.log('had the following error when spinning up creeps:');
+            console.log(e.stack);
+            debugger;        
+        }
+    });
+    global.creeps = _.indexBy(creepObjs, function (creepobj) {
+        return creepobj.name;
+    });
+
     // maintain the creeps
     _.forEach(global.creeps, function (creepobj) {
         creepobj.maintain();
     });
-    if(!global.bootstrap) {
-        try {
-            global.bootstrap = new global.jobClasses.bootstrap();
-        } catch (e) {
-            console.log('had the following error when instantiating bootstrap');
-            console.log(e.stack);
-            debugger; 
-        }
+    try {
+        global.bootstrap = new global.jobClasses.bootstrap();
+    } catch (e) {
+        console.log('had the following error when instantiating bootstrap');
+        console.log(e.stack);
+        debugger; 
     }
 };
