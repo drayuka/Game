@@ -86,7 +86,8 @@ interface creepDescription {
     id: any,
     jobName: string,
     parentClaim: string,
-    waitingSince: number
+    waitingSince: number,
+    newClaim: string | undefined
 }
 
 
@@ -547,13 +548,10 @@ class spawnJob extends JobClass {
             return 1;
         });
     }
-    findAvailableSpawnsInRoom (roomName: string) : StructureSpawn[] {
+    findSpawnsInRoom (roomName: string) : StructureSpawn[] {
         var self = this;
         return _.filter(Game.spawns, function (spawn) {
             if(spawn.pos.roomName != roomName) {
-                return false;
-            }
-            if(spawn.spawning) {
                 return false;
             }
             return true;
@@ -569,24 +567,31 @@ class spawnJob extends JobClass {
             }
             var availableEnergy = parentClaimRoom.energyAvailable;
             var capacityAvailable = parentClaimRoom.energyCapacityAvailable;
-            var availableSpawns = self.findAvailableSpawnsInRoom(parentClaim);
+            var spawns = self.findSpawnsInRoom(parentClaim);
+            var availableSpawns = _.filter(spawns, function (spawn) {
+                if(spawn.spawning) {
+                    return false;
+                }
+                return true;
+            });
 
             _.forEach(_.sortBy(jobReqs, function (req, jobName) {
                 return jobPriority[jobName];
             }), function (goalReqs) {
                 _.forEach(goalReqs, function (creepDesc: creepDescription, id: string) {
                     // can't spawn right now
+                    var couldntspawn = false;
                     if(!availableSpawns) {
-                        self.checkMoveReq(creepDesc);
+                        couldntspawn = true;
                     }
                     var cost = self.costForPower(creepDesc.type, creepDesc.power);
                     // can never spawn in this room
                     if(cost > capacityAvailable) {
-
+                        couldntspawn = true;
                     }
                     // can't spawn right now
                     if(availableEnergy < cost) {
-
+                        couldntspawn = true;
                     }
 
                     var result = self.spawn(availableSpawns[0], creepDesc);
@@ -595,13 +600,30 @@ class spawnJob extends JobClass {
                         availableSpawns.shift();
                     } else {
                         console.log('couldnt spawn ' + JSON.stringify(creepDesc) + ' got error: ' + result);
+                        couldntspawn = true;
+                    }
+                    if(couldntspawn) {
+                        self.checkMoveReq(creepDesc, spawns, availableEnergy, capacityAvailable);
                     }
                 });
             });
         });
     }
-    checkMoveReq(creepDesc: creepDescription) {
+    //check to see if we need to try to spawn this creep in another room
+    checkMoveReq(creepDesc: creepDescription, spawns: StructureSpawn[], availEnergy: number, energyCap: number) {
         var self = this;
+        var soonestAvailableSpawn = _.min(spawns, function (spawn: StructureSpawn) {
+            if(spawn.spawning) {
+                return spawn.spawning.remainingTime;
+            } else {
+                return 0;
+            }
+        });
+        //we should be trying to distinguish a couple of things:
+        // 1. that if the spawns in the 
+        if(soonestAvailableSpawn < 50) {
+            
+        }
     }
     spawnCreeps() {
         var self = this;
