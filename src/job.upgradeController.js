@@ -152,11 +152,9 @@ class upgradeController extends JobClass {
                 }
             }
 
-
             var desiredPower = self.getUpgradePowerForUpgradeGoal(goal);
-            var maxPower = self.jobs.spawn.getMaxPowerForRoom('heavyworker', goal.roomName);
-            if(desiredPower > 2 * maxPower) {
-                desiredPower = 2 * maxPower;
+            if(desiredPower > 2 * 32) {
+                desiredPower = 2 * 32;
             }
             if(desiredPower == 0) {
                 desiredPower = 1;

@@ -67,17 +67,6 @@ interface goalRequistions {
         memory: any
     }
 }
-interface collapsedRequisition {
-    typeName: string,
-    power: number,
-    memory: any,
-    additionalInformation: {
-        jobName: string,
-        priority: number,
-        goalId: string,
-        roomName: string   
-    }
-}
 
 interface creepDescription {
     power: number,
@@ -87,7 +76,7 @@ interface creepDescription {
     jobName: string,
     parentClaim: string,
     waitingSince: number,
-    newClaim: string | undefined
+    newClaim: string[] | undefined
 }
 
 
@@ -170,7 +159,7 @@ var creepTypes : {[key: string]: creepType} = {
     }
 };
 //this is a job for ease of use, it doesn't really make sense for spawn to have goals;
-class spawnJob extends JobClass {
+class SpawnJob extends JobClass {
     execute() {
         var self = this;
         self.updateSpawns();
@@ -200,6 +189,7 @@ class spawnJob extends JobClass {
         }
         return self._currentCost;
     }
+    altSpawnRooms : {[key: string]: {[key: string] : number}};
     _roomSpawnCache : RoomSpawnCache | undefined;
     _justStartedSpawning: StartedSpawning | undefined;
     _currentCost: CurrentCost | undefined;
@@ -229,28 +219,37 @@ class spawnJob extends JobClass {
         if(!self.memory.requisitions) {
             self.memory.requisitions = {};
         }
-        var found = 0;
 
         _.forEach(creepDescriptions, function (creepDesc: creepDescription) {
             var parentClaim = creepDesc.parentClaim;
             var jobName = creepDesc.jobName;
-            var jobRequisitions = self.memory.requisitions[parentClaim][jobName];
             if(!self.requisitions[parentClaim]) {
                 self.requisitions[parentClaim] = {};
             }
             if(!self.requisitions[parentClaim][jobName]) {
                 self.requisitions[parentClaim][jobName] = {};
             }
+            var jobRequisitions = self.memory.requisitions[parentClaim][jobName];
             var curRequisition = jobRequisitions[creepDesc.id];
-            if(curRequisition && curRequisition.power != creepDesc.power) {
+            var minPower = self.minPower(creepDesc.type);
+            // make sure the power is a multiple of the min power, or round it up to one.
+            if(creepDesc.power % minPower != 0) {
+                creepDesc.power = creepDesc.power + (creepDesc.power % minPower);
+            }
+            if(curRequisition != undefined && curRequisition.power != creepDesc.power) {
+                // if this creep is already spawning, can't do anything to its reequisition
+                if(_.find(self.creeps, function (creep) {
+                    return creep.memory.goal == creepDesc.id
+                }) != undefined) {
+                    return true;
+                };
                 if(creepDesc.power > 0) {
                     curRequisition.power = creepDesc.power;        
                 } else {
                     delete jobRequisitions[creepDesc.id];
-                    return;
                 }
-            } else if(!curRequisition) {
-                jobRequisitions[creepDesc.id] = creepDesc;
+            } else if(curRequisition == undefined) {
+                jobRequisitions[creepDesc.id] = creepDesc.id;
             }
         });
     }
@@ -416,22 +415,23 @@ class spawnJob extends JobClass {
         }
         
     }
-    spawn(spawn: StructureSpawn, creepDesc: creepDescription) {
+    partsForDescription(creepDesc: creepDescription) : BodyPartConstant[] {
         var self = this;
-        var creepType = creepTypes[creepDesc.type];
-        var power = creepDesc.power;
-        var requiredParts = _.cloneDeep(creepType.required_parts);
         var minPower = self.minPower(creepDesc.type);
-        if(power % minPower != 0) {
-            power = power + (power % minPower);
-        }
-        var parts = _.flatten(_.times((power / minPower), function () {
+        var creepType = creepTypes[creepDesc.type];
+        var requiredParts = _.cloneDeep(creepType.required_parts);
+        
+        var parts = _.flatten(_.times((creepDesc.power / minPower), function () {
             return creepType.parts;
         }));
-        var finalParts = parts;
-        if(requiredParts) {
-            finalParts = _.flatten([requiredParts, parts]);
+        if(requiredParts != undefined) {
+            parts.push(...requiredParts);
         }
+        return parts;
+    }
+    spawn(spawn: StructureSpawn, creepDesc: creepDescription) {
+        var self = this;
+        var finalParts = self.partsForDescription(creepDesc);
         var sortedFinalParts = self.sortParts(finalParts);
         var memory = _.cloneDeep(creepDesc.memory);
         memory.type = creepDesc.type;
@@ -446,108 +446,6 @@ class spawnJob extends JobClass {
             return partPriority[part];
         });
     }
-    // should return an object that answers the question: 
-    // for a given room, which spawns should service it 
-    // will only return rooms with spawns that are not currently spawning
-    // this method is deep, and should be heavily cached;
-    // should return the list as so:
-    // {
-        //ROOM_NAME: {
-            //distance: DISTANCE,
-            //spawns: [SPAWN_ID_1, SPAWN_ID_2],
-            //capacityAvailable: ENERGY_CAPACITY_AVAILABLE
-            //energyAvailable: ENERGY_CURRENTLY_AVAILABLE
-        //}
-    //}}
-
-    getSpawnsForRoom(checkingRoomName: string, available: boolean) : roomSpawnInfo[] {
-        var self = this;
-        if(!self.roomSpawnCache[checkingRoomName]) {
-            var spawnsByRoom = _.groupBy(Game.spawns, function (spawn) {
-                return spawn.pos.roomName;
-            });
-            var rooms = utils.getRoomsAtRange(checkingRoomName, 3);
-            
-            var roomsByDistance : spawnsForRoom = {};
-            _.forEach(rooms, function (distance: number, roomName: string) {
-                if(!spawnsByRoom[roomName]) {
-                    return true;
-                }
-                var spawnIds = _.map(spawnsByRoom[roomName], function (spawn) {
-                    return spawn.id;
-                });
-
-                roomsByDistance[roomName] = {
-                    distance: distance,
-                    spawns: spawnsByRoom[roomName],
-                    capacityAvailable: Game.rooms[roomName].energyCapacityAvailable,
-                    roomName: undefined,
-                    energyAvailable: undefined
-                };
-            });
-            self.roomSpawnCache[checkingRoomName] = roomsByDistance;
-        }
-        var availableRooms: roomSpawnInfo[] = [];
-        _.forEach(self.roomSpawnCache[checkingRoomName], function (room, roomName : string) {
-            var availableSpawns = room.spawns;
-            if(available) {
-                availableSpawns = _.filter(availableSpawns, function (spawn) {
-                    if(spawn.spawning) {
-                        return 0;
-                    }
-                    if(self.justStartedSpawning[spawn.id]) {
-                        return 0;
-                    }
-                    return 1;
-                });
-                if(availableSpawns.length == 0) {
-                    return true;
-                }
-            }
-            var currentCost = self.currentCost[roomName] ? self.currentCost[roomName] : 0;
-            var capacityAvailable = room.capacityAvailable;
-            var energyAvailable = Game.rooms[roomName].energyAvailable - currentCost;
-            //////////
-            /////// FIX ME
-            ////////
-            if(self.jobs.roomworker.memory.roomAssignments[roomName]) {
-                var roomWorkers = self.jobs.roomworker.memory.roomAssignments[roomName].length;
-                if(roomWorkers == 0) {
-                    capacityAvailable = Math.max(energyAvailable, 300);
-                }
-            }
-            availableRooms.push({
-                roomName: roomName,
-                distance: room.distance,
-                spawns: availableSpawns,
-                capacityAvailable: capacityAvailable,
-                energyAvailable: Game.rooms[roomName].energyAvailable - currentCost
-            });
-        });
-        return _.sortBy(availableRooms, function (room) {
-            return room.distance;
-        });
-    }
-    // this is used to allow a room to limit the size of 
-    // the creeps it creates so that it creates
-    // a limited number
-    getMaxPowerForRoom(creepType: string, roomName: string) {
-        var self = this;
-        var spawns = self.getSpawnsForRoom(roomName, false);
-        var maxCreepCost : number = _.max(spawns, function (room: roomSpawnInfo) {
-            return room.capacityAvailable;
-        }).capacityAvailable;
-        return self.powerForCost(creepType, maxCreepCost);
-    }
-    findAvailableSpawns () {
-        var self = this;
-        return _.filter(Game.spawns, function (spawn) {
-            if(spawn.spawning) {
-                return 0;
-            }
-            return 1;
-        });
-    }
     findSpawnsInRoom (roomName: string) : StructureSpawn[] {
         var self = this;
         return _.filter(Game.spawns, function (spawn) {
@@ -557,9 +455,27 @@ class spawnJob extends JobClass {
             return true;
         });
     }
+    //since we can move requisitions to different spawns, but we still need to be able to tell where
+    //these requisitions are supposed to be spawning from. so we don't get multiple of the same
+    // requisitions, it would also be nice to order spawns 
+    getMovedRequisitions() {
+        var self = this;
+        var requisitions = _.cloneDeep(self.memory.requisitions);
+        _.forEach(requisitions, function (jobReqs, parentClaim) {
+            _.forEach(jobReqs, function (goalReqs){
+
+            });
+        });
+        return requisitions;
+    }
     spawnCreeps() {
         var self = this;
-        _.forEach(self.memory.requisitions, function (jobReqs: any, parentClaim: string) {
+        var requisitions = self.getMovedRequisitions();
+        _.forEach(requisitions, function (jobReqs: any, parentClaim: string) {
+            //the queue is the amount of creep parts which are waiting to spawn for this parent claim
+            //which have come in sooner than this one in priiority;
+            var queue = 0;
+            var waitForEnergy = false;
             var parentClaimRoom = Game.rooms[parentClaim];
             // if we can't see the parent claim, something is screwed, stop spawning for it.
             if(!parentClaimRoom) {
@@ -589,29 +505,64 @@ class spawnJob extends JobClass {
                     if(cost > capacityAvailable) {
                         couldntspawn = true;
                     }
-                    // can't spawn right now
+                    // can't spawn right now but 
+                    // we shouldn't spawn anything else 
+                    // in this room until it has enough energy to spawn this creep
+                    // if we have problems it should eventually be moved to another room
                     if(availableEnergy < cost) {
                         couldntspawn = true;
+                        waitForEnergy = true;
+                    }
+                    
+                    // if we are waiting for energy then we should not spawn a creep, even if we have the energy
+                    // but we should still check to see if we need to move that creep to another 
+                    // spawning room
+                    if(waitForEnergy) {
+                        couldntspawn = true;
+                    } else {
+                        var result = self.spawn(availableSpawns[0], creepDesc);
+                        if(typeof result == 'string') {
+                            availableEnergy -= cost;
+                            availableSpawns.shift();
+                        } else {
+                            console.log('couldnt spawn ' + JSON.stringify(creepDesc) + ' got error: ' + result);
+                            couldntspawn = true;
+                        }
                     }
 
-                    var result = self.spawn(availableSpawns[0], creepDesc);
-                    if(typeof result == 'string') {
-                        availableEnergy -= cost;
-                        availableSpawns.shift();
-                    } else {
-                        console.log('couldnt spawn ' + JSON.stringify(creepDesc) + ' got error: ' + result);
-                        couldntspawn = true;
-                    }
                     if(couldntspawn) {
-                        self.checkMoveReq(creepDesc, spawns, availableEnergy, capacityAvailable);
+                        queue += self.partsForDescription(creepDesc).length * 3;
+                        if(self.checkMoveReq(creepDesc, spawns, availableEnergy, capacityAvailable, queue)) {
+                            self.moveRequisition(creepDesc);
+                        }
                     }
                 });
+                // see above, if we don't have enough energy 
+                // to spawn a creep, but we could (eventually)
+                // then we should wait for that to happen
             });
         });
     }
-    //check to see if we need to try to spawn this creep in another room
-    checkMoveReq(creepDesc: creepDescription, spawns: StructureSpawn[], availEnergy: number, energyCap: number) {
+    moveRequisition(creepDesc: creepDescription) {
         var self = this;
+        var roomToMoveTo = self.getNearestSpawnRoom(creepDesc);
+        if(!creepDesc.newClaim) {
+            creepDesc.newClaim = [];
+        }
+        creepDesc.newClaim.unshift(roomToMoveTo);
+    }
+    //check to see if we need to try to spawn this creep in another room
+    checkMoveReq(creepDesc: creepDescription, spawns: StructureSpawn[], availEnergy: number, energyCap: number, queue: number) {
+        var self = this;
+        var currentSpawnRoom = creepDesc.newClaim ? creepDesc.newClaim[0] : creepDesc.parentClaim;
+        var room = Game.rooms[currentSpawnRoom]
+        if(!room) {
+            return true;
+        }
+        if(!room.storage) {
+            return true;
+        }
+
         var soonestAvailableSpawn = _.min(spawns, function (spawn: StructureSpawn) {
             if(spawn.spawning) {
                 return spawn.spawning.remainingTime;
@@ -619,144 +570,93 @@ class spawnJob extends JobClass {
                 return 0;
             }
         });
-        //we should be trying to distinguish a couple of things:
-        // 1. that if the spawns in the 
-        if(soonestAvailableSpawn < 50) {
-            
-        }
-    }
-    spawnCreeps() {
-        var self = this;
-        var availableSpawns = self.findAvailableSpawns();
-        if(availableSpawns.length == 0) {
-            return;
-        }
-        var requests = self.getDecoratedRequests();
-        if(requests.length == 0) {
-            return;
-        }
-        requests = _.sortBy(requests, function (req) {
-            return req.additionalInformation.priority;
-        });
-        var roomRequests = _.groupBy(requests, function (req) {
-            return req.additionalInformation.roomName;
-        });
-        // requests should be in priority order already so they should get spawned first
-        _.forEach(roomRequests, function (reqs, roomName) {
-            // if we are blocking spawning in this room due to other invader creeps being in it
-            var rooms = self.getSpawnsForRoom(roomName, true);
 
-            if(rooms.length == 0) {
-                console.log('cant spawn in room ' + roomName + ' because there are no available spawns in range');
+
+        //queue length is roughly the amount of parts * 3 / NUM_SPAWNS
+        var cost = self.costForPower(creepDesc.type, creepDesc.power);
+        if(cost > energyCap) {
+            return true;
+        }
+
+        //if we need more energy than we have but we are ready to spawn
+        // check to see if approximate time to refill energy is worth waiting for
+        if(cost > availEnergy && !soonestAvailableSpawn.spawning) {
+            // don't have the energy to spawn this creep in this room right now
+            // don't wait to get it
+            if(room.storage.store[RESOURCE_ENERGY] < cost - availEnergy) {
                 return true;
             }
-            var allRooms = self.getSpawnsForRoom(roomName, false);
-            var maxCreepCost = _.max(allRooms, function (room) {
-                return room.capacityAvailable;
-            }).capacityAvailable;
+            var waitTime = (cost - availEnergy) / 10;
+            if(waitTime > self.getNearestSpawnDistance(creepDesc)) {
+                return true;
+            }
+        }
+        var queueLength = queue / spawns.length;
 
-            rooms = _.sortBy(rooms, function (room) {
-                return room.distance;
-            });
+        if(soonestAvailableSpawn.spawning && soonestAvailableSpawn.spawning.remainingTime + queueLength > self.getNearestSpawnDistance(creepDesc)) {
+            return true;
+        }
 
-            _.forEach(reqs, function (req) {
-                var maxPower = self.maxPower(req.typeName);
-                var reqPower = req.power;
-                if(req.power > maxPower) {
-                    var fewestCreeps = Math.ceil(req.power/maxPower);
-                    reqPower = Math.ceil(req.power/fewestCreeps);
-                }
-                var cost = self.costForPower(req.typeName, reqPower);
-                var canCreate = 0;
-
-                // no spawn that this room has access to can spawn a creep of the size desired
-                // even though it isn't bigger than the largest creep you could spawn of this type
-                if(cost > maxCreepCost) {
-                    console.log('cant spawn a ' + req.typeName + ' of size ' + reqPower + ' for ' + req.additionalInformation.jobName);
-                    var reqPower = self.powerForCost(req.typeName, maxCreepCost);
-                    if(reqPower == 0) {
-                        return true;
-                    }
-                    cost = self.costForPower(req.typeName, reqPower);
-                }
-
-                _.forEach(rooms, function (room) {
-                    if(cost > room.energyAvailable) {
-                        return true;
-                    }
-                    if(room.spawns.length == 0) {
-                        return true;
-                    }
-                    var result = self.spawn(room.spawns[0], req.typeName, reqPower, req.additionalInformation.jobName, req.additionalInformation.goalId, req.memory);
-                    if(typeof result == 'string') {
-                        self.logSuccessfulSpawn(room.spawns[0], cost);
-                        room.spawns.shift();
-                        room.energyAvailable = room.energyAvailable - cost;
-                        return false;
-                    }
-                    console.log('attempted to spawn and got error ' + result);
-                });
-            });
-        });
+        //patience, we will spawn it eventually
+        return false;
     }
-    // returns requisitions with already spawning creep powers deducted or removed, as appropriate
-    // should return requisitions with the following structure:
-    // [{
-        //typeName: TYPE_NAME,
-        //power: POWER,
-        //memory: MEMORY,
-        //additionalInformation: {
-            //jobName: JOB_NAME,
-            //priority: PRIORITY,
-            //goalId: GOAL_ID,
-            //roomName: ROOM_NAME
-        //}
-    //},...]
-    getDecoratedRequests() : collapsedRequisition[] {
+    getNearestSpawnRoom(creepDesc: creepDescription) : string {
         var self = this;
-        var spawningLookup = _.groupBy(self.creeps, function (creep) {
-            return creep.memory.goal;
-        });
-
-        var uninitiatedSpawns : jobRequisitions = {};
-        _.forEach(self.memory.requisitions, function (reqs, jobName) {
-            var jobUnSpawn : goalRequistions = {};
-            _.forEach(reqs, function (req, goalId) {
-                var found = spawningLookup[goalId];
-                var creepType = creepTypes[req.typeName];
-                var spawningPower = _.reduce(found, function (total, creep) {
-                    return total + creep.getActiveBodyparts(creepType.powerPart);
-                }, 0);
-                if(spawningPower < req.power) {
-                    var rectifiedReq = _.cloneDeep(req);
-                    rectifiedReq.power = req.power - spawningPower;
-                    jobUnSpawn[goalId] = rectifiedReq;
-                }
-            });
-            if(_.keys(jobUnSpawn).length != 0) {
-                uninitiatedSpawns[jobName] = jobUnSpawn;
+        var altSpawns = self.getAlternativeSpawnRooms(creepDesc);
+        var closestAltSpawn : string = creepDesc.parentClaim;
+        _.forEach(altSpawns, function (distance, roomName) {
+            if(!altSpawns[closestAltSpawn]) {
+                closestAltSpawn = roomName;
+                return true;
+            }
+            if(altSpawns[closestAltSpawn] > altSpawns[roomName]) {
+                closestAltSpawn = roomName;
+                return true;
             }
         });
-
-        return _.flatten(_.map(uninitiatedSpawns, function (reqs, jobName) {
-            return _.map(reqs, function (req, goalId) {
-                var priority = jobPriority[jobName];
-                if(!jobPriority[jobName]) {
-                    priority = jobPriority['default'];
-                }
-                return {
-                    typeName: req.typeName,
-                    power: req.power,
-                    memory: req.memory,
-                    additionalInformation : {
-                        jobName: jobName,
-                        priority: priority,
-                        goalId: goalId,
-                        roomName: self.jobs[jobName].getRoomForGoal(goalId)
-                    }
-                }
-            });
-        }));
+        //FUTURE: change this so that we pull in a gestimate for crossing the distance
+        return closestAltSpawn;
+    }
+    getNearestSpawnDistance(creepDesc: creepDescription) : number {
+        var self = this;
+        var altSpawns = self.getAlternativeSpawnRooms(creepDesc);
+        var closestAltSpawn : string = creepDesc.parentClaim;
+        _.forEach(altSpawns, function (distance, roomName) {
+            if(!altSpawns[closestAltSpawn]) {
+                closestAltSpawn = roomName;
+                return true;
+            }
+            if(altSpawns[closestAltSpawn] > altSpawns[roomName]) {
+                closestAltSpawn = roomName;
+                return true;
+            }
+        });
+        //FUTURE: change this so that we pull in a gestimate for crossing the distance
+        return altSpawns[closestAltSpawn] * 50;
+    }
+    // returns alternative spawn rooms in an object with roomnames as keys and distances as values
+    getAlternativeSpawnRooms(creepDesc: creepDescription) : {[key: string]: number} {
+        var self = this;
+        if(!self.altSpawnRooms) {
+            self.altSpawnRooms = {};
+        }
+        if(self.altSpawnRooms[creepDesc.parentClaim]) {
+            return self.altSpawnRooms[creepDesc.parentClaim];
+        }
+        var spawnRooms = _.keys(global.bootstrap.claimedRooms);
+        if(creepDesc.newClaim ) {
+            spawnRooms = _.difference(spawnRooms, creepDesc.newClaim);
+        }
+        var rooms = utils.getRoomsAtRange(creepDesc.parentClaim);
+        var altSpawnRooms : {[key:string]: number} = {};
+        _.forEach(spawnRooms, function (roomName) {
+            if(roomName == creepDesc.parentClaim) {
+                return true;
+            }
+            altSpawnRooms[roomName] = rooms[roomName];
+        });
+        self.altSpawnRooms[creepDesc.parentClaim] = altSpawnRooms;
+        return altSpawnRooms;
     }
 }
 module.exports = SpawnJob;
