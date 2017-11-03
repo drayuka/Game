@@ -106,15 +106,9 @@ class Utils {
     }
     static getStructureAtPos(pos: RoomPosition, structureType: string) {
         return _.union(<RoomObject[]>_.filter(<Structure[]>pos.lookFor(LOOK_STRUCTURES), function (structure) {
-            if(structure.structureType == structureType) {
-                return 1;
-            }
-            return 0;
+            return structure.structureType == structureType
         }), _.filter(<ConstructionSite[]>pos.lookFor(LOOK_CONSTRUCTION_SITES), function (structure) {
-            if(structure.structureType == structureType) {
-                return 1;
-            }
-            return 0;
+            return structure.structureType == structureType
         }))[0];
     }
     // should return an object with keys of roomNames and values of distances from the original room; 
