@@ -134,6 +134,7 @@ class harvest extends JobClass {
             }
             self.jobs.spawn.addRequisition(self.name, 'heavyworker', 6, goal.id, {});
         });
+
     }
 }
 module.exports = harvest;
