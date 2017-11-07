@@ -49,7 +49,7 @@ class GoalClass {
         }
         self._target = <RoomObject>Game.getObjectById(self.id);
         if(!self._target) {
-            console.log(self.roomName + ' ' + self.id + ' ' + self.job.name + ' couldnt find the target of this goal, you should develop some checking for this job');
+            console.log(self.roomName + ' ' + self.id + ' couldnt find the target of this goal, you should develop some checking for this job');
         }
         return self._target;
     }
@@ -98,12 +98,16 @@ class GoalClass {
             var roomCosts = utils.workerRoomCosts()(self.roomName);
             roomPositions = _.filter(roomPositions, function (pos) {
                 if(roomCosts.get(pos.x, pos.y) == 255) {
-                    return 0;
+                    return false;
                 }
-                if(pos.lookFor(LOOK_TERRAIN)[0] == 'wall') {
-                    return 0;
+                var terrain : RoomObject | string = pos.lookFor(LOOK_TERRAIN)[0];
+                if(typeof terrain != 'string') {
+                    throw new Error('terrain somehow not a string, panic');
                 }
-                return 1;
+                if(terrain == 'wall') {
+                    return false;
+                }
+                return true;
             });
         } else {
             throw new Error('could not build positions list, didnt have positions pre calculated or a range');
@@ -112,12 +116,12 @@ class GoalClass {
             var noRoads = _.filter(roomPositions, function (pos) {
                 var road = utils.getRoadAtPos(pos);
                 if(road) {
-                    return 0;
+                    return false;
                 }
                 if(pos.x == 0 || pos.y == 0 || pos.x == 49 || pos.y == 49) {
-                    return 0;
+                    return false;
                 }
-                return 1;
+                return true;
             });
             if(noRoads.length != 0) {
                 roomPositions = noRoads;
