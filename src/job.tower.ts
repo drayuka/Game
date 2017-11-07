@@ -4,7 +4,7 @@ interface creepRoomList {
 	[key: string]: Creep[]
 }
 
-class towerJob extends JobClass {
+class TowerJob extends JobClass {
 	enemyCreeps : creepRoomList;
 	execute() {
 		var self = this;
@@ -47,3 +47,5 @@ class towerJob extends JobClass {
 		});
 	}
 }
+
+module.exports = TowerJob;

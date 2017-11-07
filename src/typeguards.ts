@@ -49,7 +49,7 @@ interface JobDefinitionList {
     roomworker : typeof roomworkerJob,
     links : typeof linksJob,
     protector : typeof protectorJob,
-    mining : typeof miningJob,
+    //mining : typeof miningJob,
     tower : typeof towerJob
 }
 

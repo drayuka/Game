@@ -10,7 +10,7 @@ var job = require('job');
 var goal = require('goal');
 var utils = require('utils');
 var creep = require('creep');
-class harvest extends JobClass {
+class HarvestJob extends JobClass {
     execute() {
         var self = this;
         self.updateStorages();
@@ -22,6 +22,9 @@ class harvest extends JobClass {
         var self = this;
         _.forEach(self.goals, function (goal) {
             if(!Game.rooms[goal.roomName]) {
+                return;
+            }
+            if(!goal.target) {
                 return;
             }
             if ((goal.meta.constructingStorage && Game.getObjectById(goal.meta.constructingStorage)) || (goal.meta.storage && Game.getObjectById(goal.meta.storage)) || goal.meta.linkStorage) {
@@ -63,16 +66,16 @@ class harvest extends JobClass {
             }
         });
     }
-    controlCreep(myCreep) {
+    controlCreep(myCreep: CreepClass) {
         var self = this;
         if (myCreep.arrived()) {
             // if the storage needs to be built, build it or harvest more energy
             if(myCreep.goal.meta.constructingStorage) {
-                var storageBuild = Game.getObjectById(myCreep.goal.meta.constructingStorage);
+                var storageBuild = <ConstructionSite>Game.getObjectById(myCreep.goal.meta.constructingStorage);
                 if(myCreep.energy >= myCreep.workPower('build') * 5) {
                     myCreep.build(storageBuild);
                 } else {
-                    myCreep.harvest(myCreep.goal.target);
+                    myCreep.harvest(<Source>myCreep.goal.target);
                 }
             // if we have a storage, either harvest and store in it, or harvest and repair it
             } else if(myCreep.goal.meta.storage) {
@@ -134,7 +137,6 @@ class harvest extends JobClass {
             }
             self.jobs.spawn.addRequisition(self.name, 'heavyworker', 6, goal.id, {});
         });
-
     }
 }
-module.exports = harvest;
+module.exports = HarvestJob;

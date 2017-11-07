@@ -1,17 +1,17 @@
 
 global.jobClasses = {
-    upgrade: require('job.upgradeController'),
-    spawn: <spawnJob>require('job.spawn'),
-    harvest: require('job.harvest'),
-    logistics: require('job.logistics'),
-    bootstrap: <bootstrapJob>require('job.bootstrap'),
-    claim: require('job.claim'),
-    scout: require('job.scout'),
-    reserve: require('job.reserve'),
-    roomworker: require('job.roomworker'),
-    links: require('job.links'),
-    protector: <protectorJob>require('job.protector'),
-    mining: require('job.mining'),
+    upgrade: <UpgradeJob>require('job.upgradeController'),
+    spawn: <SpawnJob>require('job.spawn'),
+    harvest: <HarvestJob>require('job.harvest'),
+    logistics: <LogisticsJob>require('job.logistics'),
+    bootstrap: <BootstrapJob>require('job.bootstrap'),
+    claim: <ClaimJob>require('job.claim'),
+    scout: <ScoutJob>require('job.scout'),
+    reserve: <ReserveJob>require('job.reserve'),
+    roomworker: <RoomworkerJob>require('job.roomworker'),
+    links: <LinkJob>require('job.links'),
+    protector: <ProtectorJob>require('job.protector'),
+ // mining: require('job.mining'),
     tower: <towerJob>require('job.tower')
 }
 global.utils = require('utils');
@@ -32,7 +32,7 @@ var initialize = function () {
             debugger;        
         }
     });
-    global.creeps = _.indexBy(creepObjs, function (creepobj) {
+    global.creeps = _.indexBy(creepObjs, function (creepobj: Creep) {
         return creepobj.name;
     });
 
@@ -48,3 +48,5 @@ var initialize = function () {
         debugger; 
     }
 };
+
+module.exports = initialize;

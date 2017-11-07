@@ -9,7 +9,7 @@
 var job = require('job');
 var goal = require('goal');
 var utils = require('utils');
-class upgradeController extends JobClass {
+class UpgradeJob extends JobClass {
     execute() {
         var self = this;
         self.updateWaits();
@@ -167,4 +167,4 @@ class upgradeController extends JobClass {
         });
     }
 }
-module.exports = upgradeController;
+module.exports = UpgradeJob;

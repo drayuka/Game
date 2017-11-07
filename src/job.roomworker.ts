@@ -11,13 +11,18 @@ var utils = require('utils');
 var goal = require('goal');
 var job = require('job');
 var creep = require('creep');
-class roomworker extends JobClass {
+class RoomworkerJob extends JobClass {
     execute () {
         var self = this;
         self.updateRequisition();
         self.generateMissions();
         self.assignMissions();
         self.runMissions();
+    }
+    getWorkerPower() {
+        var self = this;
+        var room = Game.rooms[self.parentClaim];
+        return self.jobs.spawn.powerForCost('roomworker', room.energyCapacityAvailable);
     }
     missionGenerators() {
         var self = this;
@@ -652,4 +657,4 @@ interface Mission {
     priority: number,
     other: any
 }
-module.exports = roomworker;
+module.exports = RoomworkerJob;

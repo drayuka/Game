@@ -11,7 +11,7 @@ var goal = require('goal');
 var job = require('job');
 var creep = require('creep');
 // can be called with just name, or with target as well
-class claim extends JobClass {
+class ClaimJob extends JobClass {
     execute() {
         var self = this;
         self.reassessSites();
@@ -78,4 +78,4 @@ class claim extends JobClass {
         }
     }
 }
-module.exports = claim;
+module.exports = ClaimJob;

@@ -9,7 +9,7 @@
 var job = require('job');
 var goal = require('goal');
 var utils = require('utils');
-class logistics extends JobClass {
+class LogisticsJob extends JobClass {
     execute() {
         var self = this;
         self.updateRoutes();
@@ -314,4 +314,4 @@ class logistics extends JobClass {
         });
     }
 }
-module.exports = logistics;
+module.exports = LogisticsJob;

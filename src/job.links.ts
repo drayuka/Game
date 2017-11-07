@@ -11,7 +11,7 @@ var goal = require('goal');
 var job = require('job');
 var build = require('build');
 // can be called with just name, or with target as well
-class links extends JobClass {
+class LinkJob extends JobClass {
     execute () {
         var self = this;
         self.updateLinks();
@@ -366,4 +366,4 @@ class links extends JobClass {
         }
     }
 }
-module.exports = links;
+module.exports = LinkJob;

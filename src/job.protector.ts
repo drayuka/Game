@@ -11,7 +11,7 @@ var goal = require('goal');
 var job = require('job');
 var creep = require('creep');
 
-class protectorJob extends JobClass {
+class ProtectorJob extends JobClass {
     execute() {
         var self = this;
         self.reassessProtectionRooms();
@@ -150,4 +150,4 @@ class protectorJob extends JobClass {
         }
     }
 }
-module.exports = JobProtector;
+module.exports = ProtectorJob;
