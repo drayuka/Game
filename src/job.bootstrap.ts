@@ -301,9 +301,6 @@ class BootstrapJob {
         if(roomMemory.linking) {
             claimedRoom.jobs.links.removeRoomLinks(claimedRoomName);
         }
-        if(roomMemory.mining) {
-            claimedRoom.jobs.mining.removeDeposits(claimedRoomName);
-        }
         if(roomMemory.roomworker) {
             claimedRoom.jobs.roomworker.removeRoom(claimedRoomName);
         }
