@@ -47,9 +47,9 @@ class JobClass {
         });
         self.removeDeadCreeps(deadCreeps);
     }
-    get rooms {
+    get rooms () {
         var self = this;
-        var rooms = _.keys(global.bootstrap.claimedRooms[self.parentClaim].reservedRooms);
+        var rooms = _.keys(global.bootstrap.claimedRooms[self.parentClaim].subRooms);
         rooms.push(self.parentClaim);
         return rooms;
     }
@@ -84,7 +84,7 @@ class JobClass {
                 myGoals.push(new GoalClass(self, roomName, goalId, meta));
             });
         });
-        self._goals = <GoalList>_.indexBy(myGoals, function (sgoal) { return sgoal.id; });
+        self._goals = <GoalList>_.indexBy(myGoals, function (sgoal : GoalClass) { return sgoal.id; });
         return self._goals;
     }
     addGoal (roomName: string, target: RoomObject | string, meta: any) {
@@ -127,7 +127,7 @@ class JobClass {
             }
             return 1;
         });
-        self._creeps = _.indexBy(creeps, function (creep) {
+        self._creeps = _.indexBy(creeps, function (creep : CreepClass) {
             return creep.name; 
         });
         return self._creeps;
@@ -138,7 +138,6 @@ class JobClass {
         if(!myCreep) {
             throw new Error('could not find creep to add ' + creepName);
         }
-        myCreep.job = self;
         self.memory.creeps.push(creepName);
         if(self._creeps) {
             self._creeps[creepName] = myCreep;
