@@ -25,18 +25,18 @@ interface roomMemory {
     storage : boolean,
 }
 interface JobList {
-    upgrade : upgradeControllerJob,
-    spawn : spawnJob,
-    harvest : harvestJob,
-    logistics : logisticsJob,
-    claim : claimJob,
-    scout : scoutJob,
-    reserve : reserveJob,
-    roomworker : roomworkerJob,
-    links : linksJob,
-    protector : protectorJob,
-    mining : miningJob,
-    tower : towerJob
+    upgrade : UpgradeJob,
+    spawn : SpawnJob,
+    harvest : HarvestJob,
+    logistics : LogisticsJob,
+    claim : ClaimJob,
+    scout : ScoutJob,
+    reserve : ReserveJob,
+    roomworker : RoomworkerJob,
+    links : LinkJob,
+    protector : ProtectorJob,
+//    mining : miningJob,
+    tower : TowerJob
 }
 
 interface roomDirectory {
@@ -44,26 +44,31 @@ interface roomDirectory {
 }
 
 interface claimedRoom {
-    roomMemory : roomMemory
-    reservedRooms : {
-        [key : string] : {
-            roomMemory : roomMemory
-        }
+    roomMemory : roomMemory,
+    subRooms : {
+        [key : string] : subRoom
     },
     jobs : JobList
 }
+//not much of a difference between reserved and 
+//sub claimed at the moment, but there
+//could be in the future.
+interface subRoom {
+    type: string
+    roomMemory : roomMemory
+}
 // can be called with just name, or with target as well
-class bootstrapJob {
-    _reserveRoomToClaimRoom : {[key: string] : string};
+class BootstrapJob {
+    _subRoomToClaimedRoom : {[key: string] : string};
     memory: any;
     execute() {
         var self = this;
-        self.initializeRooms();
         self.checkRooms();
         self.runRooms();
         self.cleanupDeadCreeps();
     }
     constructor() {
+        var self = this;
         if(!Memory.jobs.bootstrap) {
             Memory.jobs.bootstrap = {};
         }
@@ -124,7 +129,7 @@ class bootstrapJob {
                 protector : false,
                 storage : false
             }, 
-            reservedRooms: {}, 
+            subRooms: {}, 
             jobs: <JobList>{}
         };
         self.initalizeRoom(self.claimedRooms[claimedRoomName], claimedRoomName);
@@ -155,16 +160,14 @@ class bootstrapJob {
         } else if (!claimedRoomName) {
             throw new Error('no claimedRoomName');
         }
-        if(!_.find(self.claimedRooms, function (room, roomName) {
-            return claimedRoomName == roomName;
-        })) {
+        if(!self.claimedRooms[claimedRoomName]) {
             throw new Error('room ' + claimedRoomName + ' is not a recorded claimed room and cannot be used as the parent of room ' + reservedRoomName + ' for reservation');
         }
         if(!Game.rooms[claimedRoomName]) {
             throw new Error('claimed room ' + claimedRoomName + ' is not visible');
         }
-        if(self.reservedRoomClaimRoom[reservedRoomName]) {
-            throw new Error('reserved ' + reservedRoomName + ' already reserved by ' + self.reservedRoomClaimRoom[reservedRoomName]);
+        if(self.subRoomToClaimRoom[reservedRoomName]) {
+            throw new Error('reserved ' + reservedRoomName + ' already reserved by ' + self.subRoomToClaimRoom[reservedRoomName]);
         }
         var room = Game.rooms[reservedRoomName];
         if(room && !room.controller) {
@@ -175,21 +178,24 @@ class bootstrapJob {
         }
 
         //all checks are done, add it in;
-        self.claimedRooms[claimedRoomName].reservedRooms[reservedRoomName] = {roomMemory : {
-            upgrading : false,
-            claiming : false,
-            claimed : false,
-            linking : 0,
-            mining : false,
-            roomworker : false,
-            harvest : false,
-            scout : false,
-            reserve : false,
-            logistics : false,
-            protector : false,
-            storage : false
-        }};
-        var reserveRoom = self.claimedRooms[claimedRoomName].reservedRooms[reservedRoomName];
+        self.claimedRooms[claimedRoomName].subRooms[reservedRoomName] = {
+            roomMemory : {
+                upgrading : false,
+                claiming : false,
+                claimed : false,
+                linking : 0,
+                mining : false,
+                roomworker : false,
+                harvest : false,
+                scout : false,
+                reserve : false,
+                logistics : false,
+                protector : false,
+                storage : false
+            },
+            type: 'reserved'
+        };
+        var reserveRoom = self.claimedRooms[claimedRoomName].subRooms[reservedRoomName];
         var claimedRoom = self.claimedRooms[claimedRoomName];
         claimedRoom.jobs.scout.addRoomToScout(reservedRoomName);
         claimedRoom.jobs.reserve.addRoomToReserve(reservedRoomName);
@@ -199,14 +205,78 @@ class bootstrapJob {
         reserveRoom.roomMemory.scout = true;
         reserveRoom.roomMemory.reserve = true;
         //reset so that this reserve room now appears there.
-        delete self._reserveRoomToClaimRoom;
+        delete self._subRoomToClaimedRoom;
+    }
+    SubClaimRoom(subClaimRoomName : string, claimedRoomName: string) {
+        var self = this;
+        if(!subClaimRoomName) {
+            throw new Error('no sub claimed room name');
+        } else if(!claimedRoomName) {
+            throw new Error('no claimed room name');
+        }
+        if(!self.claimedRooms[claimedRoomName]) {
+            throw new Error('room ' + claimedRoomName + ' is not a recorded claimed room and cannot be used as the parent of room ' + subClaimRoomName + ' for sub claiming');
+        }
+        if(!Game.rooms[claimedRoomName]) {
+            throw new Error('claimed room ' + claimedRoomName + ' is not visible');
+        }
+        if(self.subRoomToClaimRoom[subClaimRoomName]) {
+            throw new Error('sub claim room ' + subClaimRoomName + ' already covered by ' + self.subRoomToClaimRoom[subClaimRoomName]);
+        }
+        var room = Game.rooms[subClaimRoomName];
+        if(room && !room.controller) {
+            throw new Error('sub claim room ' + subClaimRoomName + ' does not have a controller');
+        }
+        if(room && room.controller && room.controller.owner) {
+            throw new Error(subClaimRoomName + ' is already owned by ' + room.controller.owner.username);
+        }
+
+        self.claimedRooms[claimedRoomName].subRooms[subClaimRoomName] = {
+            roomMemory : {
+                upgrading: false,
+                claiming: false,
+                claimed: false,
+                linking : 0,
+                mining : false,
+                roomworker: false,
+                harvest: false,
+                scout: false,
+                reserve: false,
+                logistics: false,
+                protector: false,
+                storage: false
+            },
+            type: 'claimed'
+        };
+        var subRoom = self.claimedRooms[claimedRoomName].subRooms[subClaimRoomName];
+        var claimedRoom = self.claimedRooms[claimedRoomName];
+        claimedRoom.jobs.scout.addRoomToScout(subClaimRoomName);
+        claimedRoom.jobs.claim.addRoomToClaim(subClaimRoomName);
+        claimedRoom.jobs.protector.addRoomToProtect(subClaimRoomName);
+        subRoom.roomMemory.protector = true;
+        subRoom.roomMemory.roomworker = true;
+        subRoom.roomMemory.scout = true;
+        subRoom.roomMemory.claiming = true;
+        delete self._subRoomToClaimedRoom;
+    }
+    promoteRoomToClaimRoom(roomName: string) {
+        var self = this;
+        if(!self.subRoomToClaimRoom[roomName]) {
+            throw new Error('cant promote a room that isnt a sub room');
+        }
+        var room = Game.rooms[roomName];
+        if(!room) {
+            throw new Error('cant promote a room that isnt visible');
+        }
+        if(!room.storage || !room.controller || room.controller.level < 4) {
+            throw new Error('cant promote a room that doesnt have a central storage');
+        }
+
     }
     //also automatically unreserves all rooms associated with that claimed room
     unClaimRoom (claimedRoomName : string) {
         var self = this;
-        if(!_.find(self.claimedRooms, function (room, roomName) {
-            return roomName == claimedRoomName;
-        })) {
+        if(!self.claimedRooms[claimedRoomName]) {
             throw new Error('room ' + claimedRoomName + ' cannot be unclaimed as it was not claimed');
         }
         if(!Game.rooms[claimedRoomName]) {
@@ -217,7 +287,7 @@ class bootstrapJob {
             throw new Error('attempted to unclaim ' + claimedRoomName + ' but somehow it doesnt have a controller');
         }
         // unreserve all rooms reserved for this claim room.
-        _.forEach(self.claimedRooms[claimedRoomName].reservedRooms, function (reservedRoom, roomName) {
+        _.forEach(self.claimedRooms[claimedRoomName].subRooms, function (reservedRoom, roomName) {
             self.unReserveRoom(roomName);
         });
 
@@ -257,24 +327,24 @@ class bootstrapJob {
     unReserveRoom (reservedRoomName : string) {
         throw new Error('unreserve room is currently non functional');
         var self = this;
-        if(!self.reservedRoomClaimRoom[reservedRoomName]) {
+        if(!self.subRoomToClaimRoom[reservedRoomName]) {
             throw new Error('room ' + reservedRoomName + ' cannot be unreserved as it was not reserved');
         }
-        var claimedRoomName = self.reservedRoomClaimRoom[reservedRoomName];
+        var claimedRoomName = self.subRoomToClaimRoom[reservedRoomName];
 
     }
-    get reservedRoomClaimRoom() {
+    get subRoomToClaimRoom() {
         var self = this;
-        if(self._reserveRoomToClaimRoom) {
-            return self._reserveRoomToClaimRoom;
+        if(self._subRoomToClaimedRoom) {
+            return self._subRoomToClaimedRoom;
         }
-        self._reserveRoomToClaimRoom = {};
+        self._subRoomToClaimedRoom = {};
         _.forEach(self.claimedRooms, function (claimedRoom, claimedRoomName) {
-            _.forEach(self.claimedRooms[claimedRoomName].reservedRooms, function (reservedRoom, reservedRoomName) {
-                self._reserveRoomToClaimRoom[reservedRoomName] = claimedRoomName;
+            _.forEach(self.claimedRooms[claimedRoomName].subRooms, function (reservedRoom, reservedRoomName) {
+                self._subRoomToClaimedRoom[reservedRoomName] = claimedRoomName;
             });
         });
-        return self._reserveRoomToClaimRoom;
+        return self._subRoomToClaimedRoom;
     }
     initializeRooms() {
         var self = this;
@@ -330,11 +400,41 @@ class bootstrapJob {
             }
         });
     }
+    checkSubClaimedRoom(roomName: string, subClaimedRoom: subRoom, jobs: JobList) {
+        var self = this;
+        var roomMemory = subClaimedRoom.roomMemory;
+
+        if(!Game.rooms[roomName]) {
+            console.log('cant check claimed room' + roomName + ' as it is not visible');
+            return;
+        }
+        var room = Game.rooms[roomName];
+
+        if(!room.controller) {
+            return;
+        }
+        //if we think this room is claimed but it isn't, we should probably try to reclaim it
+        if(!room.controller.my && roomMemory.claimed) {
+            roomMemory.claiming = jobs.claim.addRoom(roomName);
+        }
+        if(room.controller.my && !roomMemory.claimed) {
+            roomMemory.claimed = true;
+        }
+        if(room.controller.my && !roomMemory.upgrading) {
+            roomMemory.upgrading = jobs.upgrade.addRoom(roomName);
+        }
+        if(room.storage && !roomMemory.storage) {
+            roomMemory.storage == jobs.logistics.addNode(Game.rooms[roomName].storage, 'storage');
+        }
+        if(!roomMemory.harvest) {
+            roomMemory.harvest = jobs.harvest.addSources(roomName);
+        }
+    }
     checkClaimedRoom(roomName: string, claimedRoom: claimedRoom) {
         var self = this;
         var roomMemory = claimedRoom.roomMemory;
         var jobs = claimedRoom.jobs;
-        var reservedRooms = claimedRoom.reservedRooms;
+        var subRooms = claimedRoom.subRooms;
 
         if(!Game.rooms[roomName]) {
             console.log('cant check claimed room ' + roomName + ' as it is not visible');
@@ -360,11 +460,15 @@ class bootstrapJob {
         if(!roomMemory.harvest) {
             roomMemory.harvest = jobs.harvest.addSources(roomName);
         }
-        _.forEach(reservedRooms, function (reservedRoom, reservedRoomName) {
-            self.checkReservedRoom(reservedRoomName, reservedRoom, jobs);
+        _.forEach(subRooms, function (subRoom, subRoomName) {
+            if(subRoom.type == 'reserved') {
+                self.checkReservedRoom(subRoomName, subRoom, jobs);
+            } else if(subRoom.type == 'claimed') {
+                self.checkSubClaimedRoom(subRoomName, subRoom, jobs);
+            }
         })
     }
-    checkReservedRoom(roomName: string, reservedroom: {[key: string]: RoomMemory}, jobs: JobList) {
+    checkReservedRoom(roomName: string, reservedroom: subRoom, jobs: JobList) {
         var self = this;
         var roomMemory = reservedroom.roomMemory;
         
@@ -379,4 +483,5 @@ class bootstrapJob {
     }
 }
 
-module.exports = bootstrapJob;
+
+module.exports = BootstrapJob;
