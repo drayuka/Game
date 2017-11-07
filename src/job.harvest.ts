@@ -57,7 +57,11 @@ class HarvestJob extends JobClass {
 
                 if(sites.length == 0) {
                     var positions = utils.openPositionsAround([{pos: goal.target.pos, minRange: 1, maxRange: 1}], {noHaltingCreeps: 1});
-                    goal.target.room.createConstructionSite(positions[0], STRUCTURE_CONTAINER);
+                    if(goal.target && goal.target.room) {
+                        goal.target.room.createConstructionSite(positions[0], STRUCTURE_CONTAINER);
+                    } else {
+                        throw new Error('couldnt get the source or the room the source is in to create a container');
+                    }
                 } else {
                     delete goal.meta.range;
                     goal.permanentPositions = [sites[0].pos];
@@ -69,6 +73,15 @@ class HarvestJob extends JobClass {
     controlCreep(myCreep: CreepClass) {
         var self = this;
         if (myCreep.arrived()) {
+            var room = Game.rooms[myCreep.goal.roomName];
+            if(!room) {
+                myCreep.memory.arrived = false;
+                return;
+            }
+            if(!myCreep.goal.target) {
+                throw new Error('Source no longer exists in room ' + room.name);
+            }
+            var source = <Source>myCreep.goal.target;
             // if the storage needs to be built, build it or harvest more energy
             if(myCreep.goal.meta.constructingStorage) {
                 var storageBuild = <ConstructionSite>Game.getObjectById(myCreep.goal.meta.constructingStorage);
@@ -79,12 +92,12 @@ class HarvestJob extends JobClass {
                 }
             // if we have a storage, either harvest and store in it, or harvest and repair it
             } else if(myCreep.goal.meta.storage) {
-                var storage = Game.getObjectById(myCreep.goal.meta.storage);
+                var storage = <StructureContainer>Game.getObjectById(myCreep.goal.meta.storage);
                 if(storage.hits < storage.hitsMax && myCreep.goal.target.energy == 0) {
                     myCreep.repair(storage);
                     myCreep.withdraw(storage, RESOURCE_ENERGY);
                 } else {
-                    myCreep.harvest(myCreep.goal.target);
+                    myCreep.harvest(<Source>myCreep.goal.target);
                     if(myCreep.pos.isEqualTo(storage.pos)) {
                     // drop harvesting we should automatically drop 
                     // energy over our carry capacity into the storage;
@@ -108,28 +121,27 @@ class HarvestJob extends JobClass {
             })
         });
     }
-    addSources(newRoom) {
+    addSources(newRoom : string) {
         var self = this;
-        var newSources = _.map(Game.rooms[newRoom].find(FIND_SOURCES), function (src) {
+        var newSources = _.map(Game.rooms[newRoom].find(FIND_SOURCES), function (src: Source) {
             // we will add positions and storages later;
             self.addGoal(newRoom, src, {halts: 1, range: 1});
         });
-        return 1;
+        return true;
     }
-    removeSources(roomName) {
+    removeSources(roomName : string) {
         var self = this;
-        _.forEach(self.getGoalsForRoom(roomName), function (goal) {
+        _.forEach(self.getGoalsInRoom(roomName), function (goal) {
             _.forEach(goal.assignments, function (creepName) {
                 self.creeps[creepName].suicide();
             });
-            Game.getObjectById(goal.meta.storage).destroy();
             self.removeGoal(goal.id);
         });
     }
     updateRequisition() {
         var self = this;
         _.forEach(self.goals, function (goal) {
-            var curWorkPower = _.reduce(goal.assignments, function (total, creepName) {
+            var curWorkPower = _.reduce(goal.assignments, function (total: number, creepName: string) {
                 return total + self.creeps[creepName].workPower('harvest');
             },0);
             if(curWorkPower >= 6) {
