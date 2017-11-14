@@ -11,7 +11,6 @@ global.jobClasses = {
     roomworker: <RoomworkerJob>require('job.roomworker'),
     links: <LinkJob>require('job.links'),
     protector: <ProtectorJob>require('job.protector'),
- // mining: require('job.mining'),
     tower: <towerJob>require('job.tower')
 }
 global.utils = require('utils');
@@ -46,6 +45,13 @@ var initialize = function () {
         console.log('had the following error when instantiating bootstrap');
         console.log(e.stack);
         debugger; 
+    }
+    try {
+        global.spawn = new global.jobClasses.spawn();
+    } catch (e) {
+        console.log('had the following error when instantiating spawn');
+        console.log(e.stack);
+        debugger;
     }
 };
 
