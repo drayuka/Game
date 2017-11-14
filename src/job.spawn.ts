@@ -280,17 +280,24 @@ class SpawnJob extends JobClass {
             self.removeCreep(creep.name);
             var creepType = creepTypes[creep.memory.type];
             var spawnedPower = creep.partCount(creepType.powerPart);
-            global.bootstrap.claimedRooms[parentClaim].jobs[jobName].addCreep(creep.name);
-
-            if(!self.memory.requisitions[parentClaim][jobName][id]) {
-                return;
+            
+            var reqs = self.memory.requisitions[parentClaim];
+            //job got removed or the parent claim room no longer exists, or something else
+            // reguardless do this so we don't halt and catch fire later
+            if(!reqs || !reqs[jobName] || !reqs[jobName][id]) {
+                creep.suicide();
+                return true;
             }
             var remainingPower = self.memory.requisitions[parentClaim][jobName][id].power - spawnedPower;
             if(remainingPower <= 0) {
                 delete self.memory.requisitions[parentClaim][jobName][id];
             } else {
+                console.log('somehow we spawned an underpowered creep');
                 self.memory.requisitions[parentClaim][jobName][id].power = remainingPower;
             }
+
+            //add the creep to its job
+            global.bootstrap.claimedRooms[parentClaim].jobs[jobName].addCreep(creep.name);
         });
     }
     updateSpawns() {
