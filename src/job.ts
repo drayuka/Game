@@ -212,9 +212,9 @@ class JobClass {
         var self = this;
         return _.filter(self.creeps, function (creep) {
             if(!creep.goal) {
-                return 1;
+                return true;
             }
-            return 0;
+            return false;
         });
     }
 }
