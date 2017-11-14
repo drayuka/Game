@@ -18,23 +18,29 @@ class ClaimJob extends JobClass {
         self.updateRequisition();
         self.controlWorkers();
     }
-    addRoomToClaim(roomName) {
+    addRoomToClaim(roomName: string) {
         var self = this;
         var room = Game.rooms[roomName];
         if(!room) {
             throw new Error('do not have visibility into ' + roomName);
+        }
+        if(!room.controller) {
+            throw new Error('room ' + roomName + ' does not have a controller');
         }
         if(self.goals[room.controller.id]) {
-            return;
+            return false;
         }
         self.addGoal(roomName, room.controller, {range: 1, halts: 1});
-        return 1;
+        return true;
     }
-    removeRoom(roomName) {
+    removeRoom(roomName: string) {
         var self = this;
         var room = Game.rooms[roomName];
         if(!room) {
             throw new Error('do not have visibility into ' + roomName);
+        }
+        if(!room.controller) {
+            throw new Error('somehow reserved room ' + roomName + ' doesnt have a controller');
         }
         _.forEach(self.goals[room.controller.id].assignments, function (creepName) {
             self.creeps[creepName].suicide();
@@ -44,7 +50,8 @@ class ClaimJob extends JobClass {
     reassessSites() {
         var self = this;
         _.forEach(self.goals, function (goal) {
-            if(Game.rooms[goal.roomName] && Game.rooms[goal.roomName].controller.my) {
+            var room = Game.rooms[goal.roomName];
+            if(room && room.controller && room.controller.my) {
                 self.removeRoom(goal.roomName);
             }
         });
@@ -55,7 +62,16 @@ class ClaimJob extends JobClass {
             if(goal.assignments.length != 0) {
                 return true;
             }
-            self.jobs.spawn.addRequisition(self.name, 'claim', 1, goal.id, {});
+            self.jobs.spawn.addRequisition([{
+                power: 1,
+                type: 'claim',
+                memory: {},
+                id: goal.id,
+                jobName: 'claim',
+                parentClaim: self.parentClaim,
+                waitingSince: Game.time,
+                newClaim: undefined
+            }]);
         });
     }
     controlWorkers() {
@@ -69,10 +85,10 @@ class ClaimJob extends JobClass {
             creep.moveOffRoad();
         });
     }
-    controlCreep(myCreep) {
+    controlCreep(myCreep: CreepClass) {
         var self = this;
         if(myCreep.arrived()) {
-            myCreep.claimController(myCreep.goal.target);
+            myCreep.claimController(<StructureController>myCreep.goal.target);
         } else {
             myCreep.navigate();
         }
