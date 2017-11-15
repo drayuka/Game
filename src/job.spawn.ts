@@ -160,6 +160,8 @@ var creepTypes : {[key: string]: creepType} = {
 };
 //this is a job for ease of use, it doesn't really make sense for spawn to have goals;
 class SpawnJob extends JobClass {
+    altSpawnRooms : {[key: string]: {[key: string] : number}};
+    _requisitions : jobRequisitions | undefined;
     constructor() {
         super('spawn','spawn',<JobList>{});
         return this;
@@ -170,45 +172,6 @@ class SpawnJob extends JobClass {
         self.giveCreeps();
         self.spawnCreeps();
     }
-    get roomSpawnCache() : RoomSpawnCache {
-        var self = this;
-        if(self._roomSpawnCache == undefined) {
-            self._roomSpawnCache = {};
-        }
-        return self._roomSpawnCache;
-    }
-    get justStartedSpawning() : StartedSpawning {
-        var self = this;
-        if(self._justStartedSpawning == undefined) {
-            self._justStartedSpawning = {};
-            return self._justStartedSpawning;
-        }
-        return self._justStartedSpawning;
-    }
-    get currentCost() : CurrentCost {
-        var self = this;
-        if(self._currentCost == undefined) {
-            self._currentCost = {};
-            return self._currentCost;
-        }
-        return self._currentCost;
-    }
-    altSpawnRooms : {[key: string]: {[key: string] : number}};
-    _roomSpawnCache : RoomSpawnCache | undefined;
-    _justStartedSpawning: StartedSpawning | undefined;
-    _currentCost: CurrentCost | undefined;
-    // should be called by other jobs on this job.
-    // stores requisitions in the following format
-    // self.memory.requisitions = {
-        //jobname: {
-            //GOAL_ID: {
-                //typeName: TYPE_NAME,
-                //power: POWER,
-                //memory: MEMORY,
-            //}
-        //}
-    //}
-    _requisitions : jobRequisitions | undefined;
     get requisitions () {
         var self = this;
         if(self._requisitions == undefined) {
