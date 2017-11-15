@@ -160,6 +160,10 @@ var creepTypes : {[key: string]: creepType} = {
 };
 //this is a job for ease of use, it doesn't really make sense for spawn to have goals;
 class SpawnJob extends JobClass {
+    constructor() {
+        super('spawn','spawn',<JobList>{});
+        return this;
+    }
     execute() {
         var self = this;
         self.updateSpawns();
@@ -420,7 +424,6 @@ class SpawnJob extends JobClass {
         } else {
             return 0;
         }
-        
     }
     partsForDescription(creepDesc: creepDescription) : BodyPartConstant[] {
         var self = this;

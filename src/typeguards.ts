@@ -60,10 +60,12 @@ namespace NodeJS {
 		jobClasses: JobDefinitionList,
 		bootstrap: BootstrapJob,
 		spawn: SpawnJob,
+		scout: ScoutJob,
 		creeps: CreepList,
 		utils: typeof Utils,
 		goal: typeof GoalClass,
-		username: string
+		username: string,
+		memory: any
 	}
 }
 

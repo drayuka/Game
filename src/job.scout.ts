@@ -13,6 +13,9 @@ var creep = require('creep');
 // can be called with just name, or with target as well
 class ScoutJob extends JobClass {
     _observers: StructureObserver[];
+    constructor() {
+        super('scout','scout',<JobList>{spawn: global.spawn})
+    }
     execute() {
         var self = this;
         self.reassessScoutingSites();

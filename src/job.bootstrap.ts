@@ -331,6 +331,8 @@ class BootstrapJob {
                     if(jobName == 'spawn') {
                         //kind of a hacky way to deal with global non-bootstrap jobs like spawn
                         claimedRoom.jobs[jobName] == global.spawn;
+                    } else if(jobName = 'scout') {
+                        claimedRoom.jobs[jobName] == global.scout;
                     } else {
                         claimedRoom.jobs[jobName] = new jobClass(jobName, claimedRoomName, claimedRoom.jobs);
                     }
