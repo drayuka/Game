@@ -1,25 +1,29 @@
 
 global.jobClasses = {
-    upgrade: <UpgradeJob>require('job.upgradeController'),
-    spawn: <SpawnJob>require('job.spawn'),
-    harvest: <HarvestJob>require('job.harvest'),
-    logistics: <LogisticsJob>require('job.logistics'),
-    bootstrap: <BootstrapJob>require('job.bootstrap'),
-    claim: <ClaimJob>require('job.claim'),
-    scout: <ScoutJob>require('job.scout'),
-    reserve: <ReserveJob>require('job.reserve'),
-    roomworker: <RoomworkerJob>require('job.roomworker'),
-    links: <LinkJob>require('job.links'),
-    protector: <ProtectorJob>require('job.protector'),
-    tower: <towerJob>require('job.tower')
+    upgrade: <typeof UpgradeJob>require('job.upgradeController'),
+    spawn: <typeof SpawnJob>require('job.spawn'),
+    harvest: <typeof HarvestJob>require('job.harvest'),
+    logistics: <typeof LogisticsJob>require('job.logistics'),
+    bootstrap: <typeof BootstrapJob>require('job.bootstrap'),
+    claim: <typeof ClaimJob>require('job.claim'),
+    scout: <typeof ScoutJob>require('job.scout'),
+    reserve: <typeof ReserveJob>require('job.reserve'),
+    roomworker: <typeof RoomworkerJob>require('job.roomworker'),
+    links: <typeof LinkJob>require('job.links'),
+    protector: <typeof ProtectorJob>require('job.protector'),
+    tower: <typeof TowerJob>require('job.tower')
 }
 global.utils = require('utils');
 global.goal = require('goal');
 global.username = 'shockfist';
 
 var initialize = function () {
-    if(!Memory.jobs) {
-        Memory.jobs = {};
+    if(!global.memory || JSON.stringify(global.memory) != RawMemory.get()) {
+        global.memory = JSON.parse(RawMemory.get())
+        console.log('had to parse memory');
+    }
+    if(!global.memory.jobs) {
+        global.memory.jobs = {};
     }
     var creepObjs = _.map(Game.creeps, function (creep) {
         try {
@@ -40,19 +44,28 @@ var initialize = function () {
         creepobj.maintain();
     });
     try {
-        global.bootstrap = new global.jobClasses.bootstrap();
-    } catch (e) {
-        console.log('had the following error when instantiating bootstrap');
-        console.log(e.stack);
-        debugger; 
-    }
-    try {
         global.spawn = new global.jobClasses.spawn();
     } catch (e) {
         console.log('had the following error when instantiating spawn');
         console.log(e.stack);
         debugger;
     }
+    try {
+        global.scout = new global.jobClasses.scout();
+    } catch (e) {
+        console.log('had the following error when instatiating scout');
+        console.log(e.stack);
+        debugger;
+    }
+    try {
+        global.bootstrap = new global.jobClasses.bootstrap();
+    } catch (e) {
+        console.log('had the following error when instantiating bootstrap');
+        console.log(e.stack);
+        debugger; 
+    }
+
+
 };
 
 module.exports = initialize;
