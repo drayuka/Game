@@ -34,11 +34,11 @@ class HarvestJob extends JobClass {
             if (!goal.meta.constructingStorage || (goal.meta.constructingStorage && !Game.getObjectById(goal.meta.constructingStorage))) {
                 delete goal.meta.constructingStorage;
                 //storage build has disappeared;
-                var sites = goal.target.pos.findInRange(FIND_STRUCTURES, 1, { filter: function (site) { 
+                let sites : Structure[] = goal.target.pos.findInRange(FIND_STRUCTURES, 1, { filter: function (site: Structure) { 
                     if (site.structureType == STRUCTURE_CONTAINER || site.structureType == STRUCTURE_STORAGE) {
-                        return 1;
+                        return true;
                     }
-                    return 0;
+                    return false;
                 }});
                 if(sites.length != 0) {
                     goal.meta.storage = sites[0].id;
@@ -48,11 +48,11 @@ class HarvestJob extends JobClass {
             }
             // if we didn't get the storage in the last check, look for a construction site
             if(!goal.meta.storage) {
-                var sites = goal.target.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 1, {filter: function (site) {
+                let sites : ConstructionSite[] = goal.target.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 1, {filter: function (site: Structure) {
                     if (site.structureType == STRUCTURE_CONTAINER || site.structureType == STRUCTURE_STORAGE) {
-                        return 1;
+                        return true;
                     }
-                    return 0;
+                    return false;
                 }});
 
                 if(sites.length == 0) {
@@ -93,11 +93,11 @@ class HarvestJob extends JobClass {
             // if we have a storage, either harvest and store in it, or harvest and repair it
             } else if(myCreep.goal.meta.storage) {
                 var storage = <StructureContainer>Game.getObjectById(myCreep.goal.meta.storage);
-                if(storage.hits < storage.hitsMax && myCreep.goal.target.energy == 0) {
+                if(storage.hits < storage.hitsMax && source.energy == 0) {
                     myCreep.repair(storage);
                     myCreep.withdraw(storage, RESOURCE_ENERGY);
                 } else {
-                    myCreep.harvest(<Source>myCreep.goal.target);
+                    myCreep.harvest(source);
                     if(myCreep.pos.isEqualTo(storage.pos)) {
                     // drop harvesting we should automatically drop 
                     // energy over our carry capacity into the storage;
@@ -147,7 +147,16 @@ class HarvestJob extends JobClass {
             if(curWorkPower >= 6) {
                 return true;
             }
-            self.jobs.spawn.addRequisition(self.name, 'heavyworker', 6, goal.id, {});
+            self.jobs.spawn.addRequisition([{
+                power: 6,
+                type: 'heavyworker',
+                memory: {},
+                id: goal.id,
+                jobName: self.name,
+                parentClaim: self.parentClaim,
+                waitingSince: Game.time,
+                newClaim: undefined
+            }]);
         });
     }
 }
