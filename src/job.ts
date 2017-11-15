@@ -123,9 +123,9 @@ class JobClass {
             return global.creeps[creepName];
         }), function (creep) {
             if(!creep) {
-                return 0
+                return false
             }
-            return 1;
+            return true;
         });
         self._creeps = _.indexBy(creeps, function (creep : CreepClass) {
             return creep.name; 
