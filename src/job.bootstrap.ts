@@ -428,7 +428,7 @@ class BootstrapJob {
         }
         //if we think this room is claimed but it isn't, we should probably try to reclaim it
         if(!room.controller.my && roomMemory.claimed) {
-            roomMemory.claiming = jobs.claim.addRoom(roomName);
+            roomMemory.claiming = jobs.claim.addRoomToClaim(roomName);
             roomMemory.claimed = false;
         }
         if(room.controller.my && !roomMemory.claimed) {
@@ -472,10 +472,8 @@ class BootstrapJob {
             roomMemory.storage = jobs.logistics.addNode(Game.rooms[roomName].storage, 'storage');
         }
         if((!roomMemory.linking && room.controller.level >= 5) || (roomMemory.linking != room.controller.level)) {
-            var result = jobs.links.setupRoomLinks(roomName);
-            if(!result) {
-                throw new Error('failed to setup room links for ' + roomName);
-            }
+            jobs.links.setupRoomLinks(roomName);
+
             roomMemory.linking = room.controller.level;
         }
         if(!roomMemory.harvest) {

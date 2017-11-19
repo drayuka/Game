@@ -88,7 +88,7 @@ class HarvestJob extends JobClass {
                 if(myCreep.energy >= myCreep.workPower('build') * 5) {
                     myCreep.build(storageBuild);
                 } else {
-                    myCreep.harvest(<Source>myCreep.goal.target);
+                    myCreep.harvest(source);
                 }
             // if we have a storage, either harvest and store in it, or harvest and repair it
             } else if(myCreep.goal.meta.storage) {
@@ -106,6 +106,23 @@ class HarvestJob extends JobClass {
                         if(carry + myCreep.workPower('harvest') * 4 > myCreep.carryCapacity) {
                             myCreep.transfer(storage, RESOURCE_ENERGY);
                         } 
+                    }
+                }
+            } else if(myCreep.goal.meta.linkStorage) {
+                var link = self.jobs.links.getLinkForSource(source.id);
+                if(link instanceof RoomPosition) {
+                    return;
+                } else if(link instanceof ConstructionSite) {
+                    var storageBuild = link;
+                    if(myCreep.energy >= myCreep.workPower('build') * 5) {
+                        myCreep.build(storageBuild);
+                    } else {
+                        myCreep.harvest(source);
+                    }
+                } else if(link instanceof StructureLink) {
+                    var carry = _.sum(myCreep.carry);
+                    if(carry + myCreep.workPower('harvest') * 4 > myCreep.carryCapacity) {
+                        myCreep.transfer(link, RESOURCE_ENERGY);
                     }
                 }
             }
