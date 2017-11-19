@@ -40,25 +40,25 @@ class Utils {
             roomPosition.y+maxRange, roomPosition.x+maxRange, true);
             var spaces = _.filter(spaces, function (space) {
                 if(space.x > 49 || space.x < 0 || space.y > 49 || space.y < 0) {
-                    return 0;
+                    return false;
                 }
                 if(space.terrain == 'wall') {
-                    return 0;
+                    return false;
                 }
                 var pos = new RoomPosition(space.x, space.y, roomPosition.roomName);
                 if(pos.getRangeTo(roomPosition) < minRange) {
-                    return 0;
+                    return false;
                 }
                 if(!options.noHaltingCreeps && Utils.obstructionAt(pos)) {
-                    return 0;
+                    return false;
                 }
                 if(options.noRoads) {
                     var road = Utils.getRoadAtPos(pos);
                     if(road) {
-                        return 0;
+                        return false;
                     }
                 }
-                return 1;
+                return true;
             });
             var newSpaces = _.map(spaces, function (space) {
                 return space.x + 'y' + space.y;
@@ -136,7 +136,7 @@ class Utils {
     static serializePath(path: RoomPosition[]) : [number, number, string][]{
         var spath : [number, number, string][];
         var roomName;
-        spath = _.map(path, function (pos : RoomPosition) {
+        spath = <[number, number, string][]>_.map(path, function (pos : RoomPosition) {
             return [pos.x, pos.y, pos.roomName];
         });
         return spath;
@@ -250,13 +250,16 @@ class Utils {
 
         var costs = new PathFinder.CostMatrix();
     	
-		room.find<Structure>(FIND_STRUCTURES).forEach(function(structure: Structure) {
+		room.find<Structure>(FIND_STRUCTURES).forEach(function(structure: Structure | OwnedStructure) {
 			if(structure.structureType === STRUCTURE_ROAD) {
 				costs.set(structure.pos.x, structure.pos.y, 1);
 			} else if (_.includes(OBSTACLE_OBJECT_TYPES, structure.structureType)) {
 				costs.set(structure.pos.x, structure.pos.y, 255);
-			} else if (structure.structureType == STRUCTURE_RAMPART && !structure.my) {
-			    costs.set(structure.pos.x, structure.pos.y, 255);
+			} else if (structure.structureType == STRUCTURE_RAMPART) {
+                var rampart = <StructureRampart>structure;
+                if(!rampart.my) {
+			        costs.set(structure.pos.x, structure.pos.y, 255);
+                }
             }
 		});
 		
