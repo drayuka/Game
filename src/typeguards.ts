@@ -19,6 +19,13 @@ interface rangePos {
 	maxRange: number
 }
 
+//serialized room position [x,y, roomName]
+interface roomPos {
+	x: number, 
+	y: number
+	rn: string
+};
+
 interface openPositionsOptions {
 	noRoads: boolean,
 	noHaltingCreeps: boolean
@@ -47,7 +54,7 @@ interface JobDefinitionList {
     scout : typeof ScoutJob,
     reserve : typeof ReserveJob,
     roomworker : typeof RoomworkerJob,
-    links : typeof LinksJob,
+    links : typeof LinkJob,
     protector : typeof ProtectorJob,
     tower : typeof TowerJob
 }

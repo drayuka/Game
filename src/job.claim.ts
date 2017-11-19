@@ -9,7 +9,6 @@
 var utils = require('utils');
 var goal = require('goal');
 var job = require('job');
-var creep = require('creep');
 // can be called with just name, or with target as well
 class ClaimJob extends JobClass {
     execute() {
