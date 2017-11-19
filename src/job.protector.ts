@@ -72,7 +72,7 @@ class ProtectorJob extends JobClass {
             var room = Game.rooms[goal.roomName];
             var hostileCreeps = _.indexBy(<Array<Creep>>room.find(FIND_CREEPS, {filter: function (creep: Creep){
                 return !creep.my;
-            }}), function (creep) {
+            }}), function (creep: Creep) {
                 return creep.id;
             });
             if(_.keys(hostileCreeps).length == 0 && goal.meta.hostileCreeps.length == 0) {
@@ -101,6 +101,7 @@ class ProtectorJob extends JobClass {
     }
     updateRequisition() {
         var self = this;
+        var requisitions : creepDescription[] = [];
         _.forEach(self.goals, function (goal) {
             if(!goal.meta.roomGoal) {
                 return true;
@@ -114,8 +115,19 @@ class ProtectorJob extends JobClass {
             if(goal.meta.hostileCreeps.length == 0) {
                 return true;
             }
-            self.jobs.spawn.addRequisition(self.name, 'warrior', 8, goal.id, {});
+            requisitions.push({
+                power: 8,
+                type: 'warrior',
+                memory: {},
+                id: goal.id,
+                jobName: self.name,
+                parentClaim: self.parentClaim,
+                waitingSince: Game.time,
+                newClaim: undefined
+            });
         });
+        self.jobs.spawn.addRequisition(requisitions);
+
     }
     controlWarriors() {
         var self = this;

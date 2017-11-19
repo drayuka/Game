@@ -7,10 +7,15 @@
  * mod.thing == 'a thing'; // true
  */
 
+interface MissionGenerator {
+    [key: string]: Function
+}
+interface MissionGenerators {
+    [key: string]: MissionGenerator
+}
+
 var utils = require('utils');
 var goal = require('goal');
-var job = require('job');
-var creep = require('creep');
 class RoomworkerJob extends JobClass {
     execute () {
         var self = this;
@@ -24,7 +29,7 @@ class RoomworkerJob extends JobClass {
         var room = Game.rooms[self.parentClaim];
         return self.jobs.spawn.powerForCost('roomworker', room.energyCapacityAvailable);
     }
-    missionGenerators() {
+    get missionGenerators() : MissionGenerators {
         var self = this;
         return {
             repairRoads: {
@@ -264,8 +269,8 @@ class RoomworkerJob extends JobClass {
                                     }
                                 }
                             } else {
-                                var pos = new RoomPosition(...mission.other.pos);
-                                var structures = _.filter(pos.lookFor(LOOK_STRUCTURES), function (struct: Structure) {
+                                var pos = new RoomPosition(mission.other.pos[0], mission.other.pos[1], mission.other.pos[2]);
+                                var structures = _.filter(<Structure[]>pos.lookFor(LOOK_STRUCTURES), function (struct: Structure) {
                                     return struct.structureType == mission.other.type;
                                 });
                                 if(structures.length == 0) {
@@ -505,9 +510,9 @@ class RoomworkerJob extends JobClass {
             creep.memory.arrived = false;
             var closestStorage = <Structure>_.find(self.jobs.logistics.getStoragesAtRange(creep.goal.roomName, 3), function (storage: StructureStorage) {
                 if(storage.store[RESOURCE_ENERGY] != 0) {
-                    return 1;
+                    return true;
                 }
-                return 0;
+                return false;
             });
 
             if(!closestStorage) {
@@ -614,7 +619,7 @@ class RoomworkerJob extends JobClass {
                         _.forEach(mission.creeps, function (creepName) {
                             self.creeps[creepName].memory.onMission = false;
                         });
-                        self.missionGenerators[mission.missionName][mission.runner].remove(self.memory.missionGen[mission.missionName], mission);
+                        self.missionGenerators[mission.missionName]['remove'](self.memory.missionGen[mission.missionName], mission);
                     }
                     return result.continue;
                 } catch (e) {
@@ -644,7 +649,16 @@ class RoomworkerJob extends JobClass {
             }
             return total + .5;
         },0);
-        self.jobs.spawn.addRequisition(self.name, 'roomworker', 6, self.parentClaim, {});
+        self.jobs.spawn.addRequisition([{
+            power: self.getWorkerPower(),
+            type: 'roomworker',
+            memory: {},
+            id: self.parentClaim,
+            jobName: self.name,
+            parentClaim: self.parentClaim,
+            waitingSince: Game.time,
+            newClaim: undefined
+        }]);
     }
 }
 
