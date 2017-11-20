@@ -183,18 +183,18 @@ class LogisticsJob extends JobClass {
             netEnergy: netEnergy
         };
     }
-    getUsableStorageAmountForGoal(goalId : string) {
+    getUsableStorageAmountForGoal(goalId : string) : number {
         var self = this;
         var storageAmount = 0;
         if(!self.goals[goalId]) {
-            return false;
+            return 0;
         }
         if(self.goals[goalId].meta.type == 'storage') {
             let storage = <StructureStorage>self.goals[goalId].target;
             storageAmount = storage.store[RESOURCE_ENERGY];
         } else {
             if(!self.goals[goalId].meta.storage) {
-                return false;
+                return 0;
             }
             var storageGoalId = self.goals[goalId].meta.storage;
             let storage = <StructureStorage>self.goals[storageGoalId].target;

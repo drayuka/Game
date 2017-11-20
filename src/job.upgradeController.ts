@@ -16,16 +16,20 @@ class UpgradeJob extends JobClass {
         self.updateRequisition();
         self.controlWorkers();
     }
-    addRoom(roomName) {
+    addRoom(roomName : string) {
         var self = this;
         var room = Game.rooms[roomName];
-        if(!Game.rooms[roomName]) {
+        if(!room) {
             throw new Error('cant see into ' + roomName);
         }
-        self.addGoal(roomName, Game.rooms[roomName].controller, {halts: 1});
+        var controller = room.controller;
+        if(!controller) {
+            throw new Error('room does not have a controller' + roomName);
+        }
+        self.addGoal(roomName, controller, {halts: 1});
         return 1;
     }
-    removeRoom(roomName) {
+    removeRoom(roomName : string) {
         var self = this;
         var removeGoal = _.find(self.goals, function (goal) {
             return goal.roomName == roomName;
@@ -41,32 +45,36 @@ class UpgradeJob extends JobClass {
     updateWaits() {
         var self = this;
         _.forEach(self.goals, function (goal) {
-            if ((goal.meta.storage && Game.getObjectById(goal.meta.storage)) || (goal.meta.linkStorage && Game.getObjectById(goal.meta.linkStorage)) || goal.meta.constructingLinkStorage) {
+            var room = Game.rooms[goal.roomName];
+            if(!room) {
+                return true;
+            }
+            if ((goal.meta.storage && Game.getObjectById(goal.meta.storage)) || goal.meta.linkStorage) {
                 return true;
             }
             delete goal.meta.storage;
-            if (!goal.meta.constructingStorage || (goal.meta.constructingStorage && !Game.getObjectById(goal.meta.constructingStorage))) {
+            if (!goal.meta.constructingStorage || !Game.getObjectById(goal.meta.constructingStorage)) {
                 delete goal.meta.constructingStorage;
                 //storage build has disappeared;
-                var sites = goal.target.pos.findInRange(FIND_STRUCTURES, 2, { filter: function (site) { 
+                var structs = <Array<StructureContainer | StructureStorage>>goal.target.pos.findInRange(FIND_STRUCTURES, 2, { filter: function (site : Structure) { 
                     if (site.structureType == STRUCTURE_CONTAINER || site.structureType == STRUCTURE_STORAGE) {
                         return 1;
                     }
                     return 0;
                 }});
                 
-                if(sites.length != 0) {
-                    var positions = utils.openPositionsAround([{pos: sites[0].pos, maxRange: 1, minRange: 0}, {pos: goal.target.pos, range: 3}])
+                if(structs.length != 0) {
+                    var positions = utils.openPositionsAround([{pos: structs[0].pos, maxRange: 1, minRange: 0}, {pos: goal.target.pos, range: 3}])
                     goal.permanentPositions = positions;
-                    goal.meta.storage = sites[0].id;
-                    if(sites[0].structureType != STRUCTURE_STORAGE) {
+                    goal.meta.storage = structs[0].id;
+                    if(structs[0].structureType != STRUCTURE_STORAGE) {
                         self.jobs.logistics.addNode(goal.meta.storage, 'sink', 15);
                     }
                 }
             }
             // if we didn't get the storage in the last check, look for a construction site
             if(!goal.meta.storage) {
-                var sites = goal.target.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {filter: function (site) {
+                var sites = <ConstructionSite[]>goal.target.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {filter: function (site : ConstructionSite) {
                     if (site.structureType == STRUCTURE_CONTAINER || site.structureType == STRUCTURE_STORAGE) {
                         return 1;
                     }
@@ -75,21 +83,22 @@ class UpgradeJob extends JobClass {
 
                 if(sites.length == 0) {
                     var positions = utils.openPositionsAround([{pos: goal.target.pos, minRange: 1, maxRange: 1}]);
-                    goal.target.room.createConstructionSite(positions[0], STRUCTURE_CONTAINER);
+                    room.createConstructionSite(positions[0], STRUCTURE_CONTAINER);
                     return true;
                 }
                 goal.meta.constructingStorage = sites[0].id;
             }
         });
     }
-    controlCreep(myCreep) {
+    controlCreep(myCreep : CreepClass) {
         var self = this;
         if (myCreep.arrived()) {
-            var storage = Game.getObjectById(myCreep.goal.meta.storage);
+            var storage = <StructureContainer>Game.getObjectById(myCreep.goal.meta.storage);
+            var controller = <StructureController>myCreep.goal.target;
             if(storage.hits < storage.hitsMax) {
                 myCreep.repair(storage);
             } else {
-                myCreep.upgradeController(myCreep.goal.target);
+                myCreep.upgradeController(controller);
             }
             if(myCreep.energy - myCreep.workPower('upgrade') < myCreep.workPower('upgrade')) {
                 myCreep.withdraw(storage, RESOURCE_ENERGY);
@@ -114,23 +123,27 @@ class UpgradeJob extends JobClass {
         var self = this;
         return 1500;
     }
-    getUpgradePowerForUpgradeGoal(goal) {
+    getUpgradePowerForUpgradeGoal(goal : GoalClass) : number {
         var self = this;
-        var buffer;
-        if(goal.meta.linkStorage) {
-            var room = Game.rooms[goal.roomName];
-            buffer = self.jobs.logistics.getUsableStorageAmountForGoal(room.storage.id);
-        } else {
-            buffer = self.jobs.logistics.getUsableStorageAmountForGoal(goal.meta.storage);
+        var room = Game.rooms[goal.roomName];
+        var storage = room.storage;
+        if(!storage) {
+            return 0;
         }
+        var controller = room.controller;
+        if(!controller) {
+            return 0;
+        }
+        var buffer = self.jobs.logistics.getUsableStorageAmountForGoal(storage.id);
         var desiredWork = Math.floor(buffer / self.bufferPerWork);
-        if(desiredWork > 15 && goal.target.level == 8) {
+        if(desiredWork > 15 && controller.level == 8) {
             return 15;
         }
         return desiredWork;
     }
     updateRequisition() {
         var self = this;
+        var creeps : creepDescription[] = [];
         _.forEach(self.goals, function (goal) {
             if((!goal.meta.storage || !Game.getObjectById(goal.meta.storage)) && (!goal.meta.linkStorage || !Game.getObjectById(goal.meta.linkStorage))) {
                 return true;
@@ -159,7 +172,16 @@ class UpgradeJob extends JobClass {
             if(desiredPower == 0) {
                 desiredPower = 1;
             }
-            self.jobs.spawn.addRequisition(self.name, 'heavyworker', desiredPower, goal.id, {});
+            creeps.push({
+                power: desiredPower,
+                type: 'heavyworker',
+                memory: {},
+                id: goal.id,
+                jobName: self.name,
+                parentClaim: self.parentClaim,
+                waitingSince: Game.time,
+                newClaim: undefined
+            });
             if(!goal.meta.linkStorage) {
                 self.jobs.logistics.setEPTForGoal(goal.meta.storage, desiredPower);
             }
