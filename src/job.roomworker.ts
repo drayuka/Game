@@ -14,6 +14,16 @@ interface MissionGenerators {
     [key: string]: MissionGenerator
 }
 
+interface Mission {
+    missionName: string,
+    maxWorkers: number,
+    runner: string,
+    missionInit: string,
+    creeps: string[],
+    priority: number,
+    other: any
+}
+
 var utils = require('utils');
 var goal = require('goal');
 class RoomworkerJob extends JobClass {
@@ -662,13 +672,4 @@ class RoomworkerJob extends JobClass {
     }
 }
 
-interface Mission {
-    missionName: string,
-    maxWorkers: number,
-    runner: string,
-    missionInit: string,
-    creeps: string[],
-    priority: number,
-    other: any
-}
 module.exports = RoomworkerJob;
