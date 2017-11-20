@@ -45,7 +45,7 @@ interface GoalList {
 }
 
 interface JobDefinitionList {
-    upgrade : typeof UpgradeControllerJob,
+    upgrade : typeof UpgradeJob,
     spawn : typeof SpawnJob,
     harvest : typeof HarvestJob,
     logistics : typeof LogisticsJob,
