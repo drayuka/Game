@@ -6,6 +6,11 @@
  * var mod = require('utils');
  * mod.thing == 'a thing'; // true
  */
+ interface failedPos {
+     unownedRoom: {[key: string] : RoomPosition},
+     noConstruction: RoomPosition[],
+     noVisibility: RoomPosition[]
+ }
 class Utils {
     /* requires that you have vision into all rooms that the positions are in
     / options - {
@@ -79,27 +84,35 @@ class Utils {
         });
     }
     static buildRoadsByPath(path : RoomPosition[]) {
+        var failedPos: failedPos = {
+            unownedRoom: {},
+            noConstruction: [],
+            noVisibility: [],
+        };
         _.forEach(path, function (step) {
             if(step.x == 0 || step.y == 0 || step.x == 49 || step.y == 49) {
                 return true;
             }
             var room = Game.rooms[step.roomName];
             if(!room) {
-                throw new Error('new road goes through non-visible room');
+                failedPos.noVisibility.push(step);
             }
             if(Utils.getRoadAtPos(step)) {
                return true; 
             }
             var result = room.createConstructionSite(step, STRUCTURE_ROAD);
             if(result == ERR_FULL) {
+                failedPos.noConstruction.push(step);
                 console.log('cant build anymore road');
-                return false;
             } else if(result == ERR_INVALID_TARGET) {
                 console.log('cant build road at ' + step);
             } else if(result) {
                 throw new Error('couldnt build ' + step + ' section of new road');
+            } else if(global.bootstrap.claimedRooms[step.roomName] || global.bootstrap.subRoomToClaimRoom[step.roomName]) {
+                failedPos.unownedRoom[step.roomName] = step;
             }
         });
+        return failedPos;
     }
     static getRoadAtPos(pos: RoomPosition) : StructureRoad | undefined {
         return <StructureRoad>Utils.getStructureAtPos(pos, STRUCTURE_ROAD);
