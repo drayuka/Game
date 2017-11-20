@@ -257,6 +257,10 @@ class BootstrapJob {
         subRoom.roomMemory.claiming = true;
         delete self._subRoomToClaimedRoom;
     }
+    transitionRoom(transitionRoomName: string, claimedRoomName: string) {
+        var self = this;
+        
+    }
     //also automatically unreserves all rooms associated with that claimed room
     unClaimRoom (claimedRoomName : string) {
         var self = this;
