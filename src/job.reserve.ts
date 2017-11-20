@@ -18,11 +18,14 @@ class ReserveJob extends JobClass {
         self.updateRequisition();
         self.controlWorkers();
     }
-    addRoomToReserve(roomName) {
+    addRoomToReserve(roomName : string) {
         var self = this;
         var room = Game.rooms[roomName];
         if(!room) {
             throw new Error('do not have visibility into ' + roomName);
+        }
+        if(!room.controller) {
+            throw new Error('cannot reserve room with no controller');
         }
         if(self.goals[room.controller.id]) {
             return;
@@ -30,11 +33,14 @@ class ReserveJob extends JobClass {
         self.addGoal(roomName, room.controller, {range: 1, halts: 1});
         return 1;
     }
-    removeRoom(roomName) {
+    removeRoom(roomName : string) {
         var self = this;
         var room = Game.rooms[roomName];
         if(!room) {
             throw new Error('do not have visibility into ' + roomName);
+        }
+        if(!room.controller) {
+            throw new Error('room somehow has no controller');
         }
         _.forEach(self.goals[room.controller.id].assignments, function (creepName) {
             self.creeps[creepName].suicide();
@@ -44,19 +50,33 @@ class ReserveJob extends JobClass {
     reassessSites() {
         var self = this;
         _.forEach(self.goals, function (goal) {
-            if(Game.rooms[goal.roomName] && Game.rooms[goal.roomName].controller.my) {
+            var room = Game.rooms[goal.roomName];
+            var controller = room.controller;
+            if(room && controller && controller.my) {
                 self.removeGoal(goal.id);
             }
         });
     }
     updateRequisition() {
         var self = this;
+        var creeps: creepDescription[] = [];
         _.forEach(self.goals, function (goal) {
-            if(goal.assignments.length != 0 || (goal.target && goal.target.reservation && goal.target.reservation.ticksToEnd > 4000)) {
+            var controller = <StructureController>goal.target;
+            if(goal.assignments.length != 0 || !controller || (controller.reservation && controller.reservation.ticksToEnd > 4000)) {
                 return true;
             }
-            self.jobs.spawn.addRequisition(self.name, 'claim', 2, goal.id, {});
+            creeps.push({
+                power: 2,
+                type: 'claim',
+                memory: {},
+                id: goal.id,
+                jobName: self.name,
+                parentClaim: self.parentClaim,
+                waitingSince: Game.time,
+                newClaim: undefined
+            })
         });
+        self.jobs.spawn.addRequisition(creeps);
     }
     controlWorkers() {
         var self = this;
@@ -69,10 +89,11 @@ class ReserveJob extends JobClass {
             creep.moveOffRoad();
         });
     }
-    controlCreep(myCreep) {
+    controlCreep(myCreep : CreepClass) {
         var self = this;
         if(myCreep.arrived()) {
-            myCreep.reserveController(myCreep.goal.target);
+            var controller = <StructureController>myCreep.goal.target;
+            myCreep.reserveController(controller);
         } else {
             myCreep.navigate();
         }
