@@ -12,7 +12,7 @@ interface roomLinks {
     controllerLink: link | undefined,
     storageLinks: link[]
 }
-var utils = <Utils>require('utils');
+var utils = require('utils');
 var goal = require('goal');
 // can be called with just name, or with target as well
 class LinkJob extends JobClass {

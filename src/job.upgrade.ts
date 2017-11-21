@@ -27,7 +27,7 @@ class UpgradeJob extends JobClass {
             throw new Error('room does not have a controller' + roomName);
         }
         self.addGoal(roomName, controller, {halts: 1});
-        return 1;
+        return true;
     }
     removeRoom(roomName : string) {
         var self = this;

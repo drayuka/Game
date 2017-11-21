@@ -25,22 +25,24 @@ var initialize = function () {
     if(!global.memory.jobs) {
         global.memory.jobs = {};
     }
-    var creepObjs = _.map(Game.creeps, function (creep) {
+    var creepObjs = <CreepClass[]>_.filter(_.map(Game.creeps, function (creep : Creep) {
         try {
             var newCreep = new CreepClass(creep);
             return newCreep;
         } catch (e) {
             console.log('had the following error when spinning up creeps:');
             console.log(e.stack);
-            debugger;        
+            debugger;
         }
+    }), function (creep: CreepClass | undefined) {
+        return typeof creep != 'undefined';
     });
-    global.creeps = _.indexBy(creepObjs, function (creepobj: Creep) {
+    global.creeps = _.indexBy(creepObjs, function (creepobj: CreepClass) {
         return creepobj.name;
     });
 
     // maintain the creeps
-    _.forEach(global.creeps, function (creepobj) {
+    _.forEach(global.creeps, function (creepobj : CreepClass) {
         creepobj.maintain();
     });
     try {

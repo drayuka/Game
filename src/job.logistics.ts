@@ -92,7 +92,7 @@ class LogisticsJob extends JobClass {
         });
         return storages;
     }
-    addNode(node : Mineral | Source | string, type: string, ept : number) {
+    addNode(node : Source | StructureStorage | StructureContainer | string, type: string, ept : number) {
         var self = this;
         var nodeObj;
         if(typeof node == 'string') {
@@ -100,13 +100,17 @@ class LogisticsJob extends JobClass {
         } else {
             nodeObj = node;
         }
+        if(!(nodeObj instanceof Source || nodeObj instanceof StructureStorage || nodeObj instanceof StructureContainer)) {
+            throw new Error('node wasnt a source or storage');
+        }
         if(self.goals[nodeObj.id]) {
-            return;
+            return true;;
         }
         self.addGoal(nodeObj.pos.roomName, nodeObj, {range: 1, type: type, ept: ept});
         if(type == 'storage') {
             self.rebuildStoragesAround(nodeObj.pos.roomName);
         }
+        return true;
     }
     rebuildStoragesAround(roomName : string) {
         var self = this;

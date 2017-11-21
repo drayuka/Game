@@ -259,7 +259,7 @@ class BootstrapJob {
     }
     transitionRoom(transitionRoomName: string, claimedRoomName: string) {
         var self = this;
-        
+
     }
     //also automatically unreserves all rooms associated with that claimed room
     unClaimRoom (claimedRoomName : string) {
@@ -442,7 +442,7 @@ class BootstrapJob {
             roomMemory.upgrading = jobs.upgrade.addRoom(roomName);
         }
         if(room.storage && !roomMemory.storage) {
-            roomMemory.storage == jobs.logistics.addNode(Game.rooms[roomName].storage, 'storage');
+            roomMemory.storage == jobs.logistics.addNode(room.storage, 'storage', 0);
         }
         if(!roomMemory.harvest) {
             roomMemory.harvest = jobs.harvest.addSources(roomName);
@@ -473,7 +473,7 @@ class BootstrapJob {
             roomMemory.upgrading = jobs.upgrade.addRoom(roomName);
         }
         if(room.storage && !roomMemory.storage) {
-            roomMemory.storage = jobs.logistics.addNode(Game.rooms[roomName].storage, 'storage');
+            roomMemory.storage = jobs.logistics.addNode(room.storage, 'storage', 0);
         }
         if((!roomMemory.linking && room.controller.level >= 5) || (roomMemory.linking != room.controller.level)) {
             jobs.links.setupRoomLinks(roomName);
