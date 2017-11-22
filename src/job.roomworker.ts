@@ -614,13 +614,15 @@ class RoomworkerJob extends JobClass {
                 if(mission.creeps.length == 0) {
                     return true;
                 }
-                var missionCreeps = _.map(mission.creeps, function (creepName) {
+                var missionCreeps = _.map(_.filter(mission.creeps, function (creepName) {
+                    return self.creeps[creepName];
+                }), function (creepName) {
                     return self.creeps[creepName];
                 });
                 try{
                     var result = self.missionGenerators[mission.missionName][mission.runner](mission, missionCreeps);
-                    if(result.creepsToGiveBack) {
-                        _.difference(mission.creeps, result.creepsToGiveBack);
+                    if(result.creepsToGiveBack && result.creepsToGiveBack.length != 0) {
+                        mission.creeps = _.difference(mission.creeps, result.creepsToGiveBack);
                         _.forEach(result.creepsToGiveBack, function (creepName) {
                             self.creeps[creepName].memory.onMission = false;
                         });
