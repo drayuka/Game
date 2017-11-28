@@ -4,54 +4,112 @@ var goal = require('goal');
 
 interface missionResults {
 	continue: boolean,
-	creepsToGiveBack: string[] | undefined
+	creepsToGiveBack?: string[],
+	result?: string
 }
 
+type container = StructureStorage | StructureTerminal | StructureContainer;
+type energyUser = StructureTower | StructureSpawn | StructureExtension | StructureLink;
+type bag = container | energyUser |  StructureLab | StructurePowerSpawn | StructurePowerBank | StructureNuker;
 
-type container = StructureTower | StructureSpawn | StructureExtension | StructureNuker;
-type bag = container | StructureLab | StructurePowerSpawn | StructurePowerBank;
-
-class Loader extends JobClass {
+class Loader extends MissionJobClass {
+	_loaderCarry: number;
 	execute () {
 		var self = this;
-
+		self.generateMissions();
+		self.assignMissions();
+		self.updateRequisitions();
+		self.runMissions();
 	}
+	//returns the max size of the creep for this parent claim room, maxes out at
+	//500 for sub lvl 7 rooms and 1000 for 7+
 	loaderCarry () {
 		var self = this;
+		if(self._loaderCarry) {
+			return self._loaderCarry;
+		}
 		var room = Game.rooms[self.parentClaim];
 		if(!room) {
 			return 0;
 		}
-		return self.jobs.spawn.powerForCost('transporter', room.energyCapacityAvailable);
+		var maxSize = 500;
+		if(room.controller && room.controller.level >= 7) {
+			maxSize = 1000;
+		}
+		self._loaderCarry = Math.min(maxSize, self.jobs.spawn.powerForCost('transporter', room.energyCapacityAvailable));
+		return self._loaderCarry;
 	}
-	getEnergy(creep: CreepClass) {
-    var self = this;
-    if(creep.carry[RESOURCE_ENERGY] == creep.carryCapacity) {
-      return true;
-    }
-    if(!creep.memory.navigatingToEnergy) {
-      creep.memory.arrived = false;
-      var closestStorage = <Structure>_.find(self.jobs.logistics.getStoragesAtRange(creep.goal.roomName, 3), function (storage: StructureStorage) {
-        if(storage.store[RESOURCE_ENERGY] != 0) {
-          return true;
-        }
-        return false;
-      });
-
-      if(!closestStorage) {
-        throw new Error('cant find a storage in range of room ' + creep.goal.roomName);
-      }
-      creep.memory.navigatingToEnergy = true;
-      creep.goal = self.jobs.logistics.goals[closestStorage.id];
-    }
-
-    if(!creep.arrived()) {
-      creep.navigate();
-    } else {
-      creep.withdraw(<Structure>creep.goal.target, RESOURCE_ENERGY);
-      creep.memory.navigatingToEnergy = false;
-    }
-    return false;
+	isTargetEmpty(target: bag, resourceType: ResourceConstant) : boolean {
+		var self = this;
+		if(target instanceof StructureStorage || target instanceof StructureTerminal || target instanceof StructureContainer) {
+			var resourceAmount = target.store[resourceType];
+			if(resourceAmount) {
+				return resourceAmount > 0;
+			}
+		} else if(target instanceof StructureSpawn || target instanceof StructureExtension || target instanceof StructureTower || target instanceof StructureLink) {
+			if(resourceType == RESOURCE_ENERGY) {
+				return target.energy > 0;
+			}
+		} else if(target instanceof StructureNuker) {
+			if(resourceType == RESOURCE_ENERGY) {
+				return target.energy > 0;
+			} else if(resourceType == RESOURCE_GHODIUM) {
+				return target.ghodium > 0;
+			}
+		} else if(target instanceof StructureLab) {
+			if(resourceType == RESOURCE_ENERGY) {
+				return target.energy > 0;
+			} else if(target.mineralType == resourceType && target.mineralAmount > 0) {
+				return true;
+			}
+		} else if(target instanceof StructurePowerSpawn) {
+			if(resourceType == RESOURCE_ENERGY) {
+				return target.energy > 0;
+			} else if(resourceType == RESOURCE_POWER) {
+				return target.power > 0;
+			}
+		} else if(target instanceof StructurePowerBank) {
+			if(resourceType == RESOURCE_POWER) {
+				return target.power > 0;
+			}
+		}
+		return false;
+	}
+	isTargetFull(target: bag, resourceType?: ResourceConstant) : boolean {
+		var self = this;
+		// full of a specific resource doesn't mean anything for contianers, 
+		// so if they are actually full, they return true, otherwise false
+		if(target instanceof StructureStorage || target instanceof StructureTerminal || target instanceof StructureContainer) {
+			return _.sum(target.store) > target.storeCapacity;
+		} else if(target instanceof StructureSpawn || target instanceof StructureExtension || target instanceof StructureTower || target instanceof StructureLink) {
+			if(resourceType == RESOURCE_ENERGY) {
+				return target.energy == target.energyCapacity;
+			}
+		} else if(target instanceof StructureNuker) {
+			if(resourceType == RESOURCE_ENERGY) {
+				return target.energy == target.energyCapacity;
+			} else if(resourceType == RESOURCE_GHODIUM) {
+				return target.ghodium == target.ghodiumCapacity;
+			}
+		} else if(target instanceof StructureLab) {
+			if(resourceType == RESOURCE_ENERGY) {
+				return target.energy == target.energyCapacity;
+			} else if(resourceType == target.mineralType && target.mineralAmount == target.mineralCapacity) {
+				return true;
+			}
+		} else if(target instanceof StructurePowerSpawn) {
+			if(resourceType == RESOURCE_ENERGY) {
+				return target.energy == target.energyCapacity;
+			} else if(resourceType == RESOURCE_POWER) {
+				return target.power == target.powerCapacity;
+			}
+		} else if(target instanceof StructurePowerBank) {
+			//this doesn't make any sense, but if we're asked this, this is probably the best response
+			if(resourceType == RESOURCE_POWER) {
+				return true;
+			}
+		}
+		return false;
 	}
 	get missionGenerators() : MissionGenerators {
 		var self = this;
@@ -82,7 +140,7 @@ class Loader extends JobClass {
 							if(!(room.controller && room.controller.owner && room.controller.owner.username == global.username)) {
 								return true;
 							}
-							var containers : container[] = room.find(FIND_MY_STRUCTURES, {filter: function (struct : OwnedStructure) {
+							var containers : energyUser[] = room.find(FIND_MY_STRUCTURES, {filter: function (struct : OwnedStructure) {
 								return _.contains(types, struct.structureType);
 							}});
 							containers = _.filter(containers, function (container) {
@@ -98,11 +156,21 @@ class Loader extends JobClass {
 							if(containers.length == 0) {
 								return true;
 							}
-							var missingEnergy = _.reduce(containers, function ( total: number, container : container) {
+							var missingEnergy = _.reduce(containers, function ( total: number, container : energyUser) {
 								return total + (container.energyCapacity - container.energy);
 							}, 0);
+							var range = Game.map.getRoomLinearDistance(roomName, self.parentClaim);
+							var closestStorage = <StructureStorage> _.find(self.jobs.logistics.getStoragesAtRange(roomName, range), function (storage: StructureStorage){
+								if(storage.store[RESOURCE_ENERGY] != 0) {
+									return true;
+								}
+							});
+							if(!closestStorage) {
+								return true;
+							}
+
 							var maxWorkers = Math.ceil(missingEnergy / self.loaderCarry());
-							var containerList = _.map(containers, function (container) { return container.id })
+							var containerList = _.map(containers, function (container) { return container.id });
 							newMissions.push({
 								missionName: 'containerReplenish',
 								maxWorkers: maxWorkers,
@@ -112,9 +180,13 @@ class Loader extends JobClass {
 								//indexes being what they are i'd rather not deal with 0 == false
 								priority: typePriority + 1,
 								other: {
-									containers: containerList,
+									from: [closestStorage.id],
+									type: 'fill',
+									to: containerList,
 									roomName: roomName,
-									resourceType: RESOURCE_ENERGY
+									resourceType: RESOURCE_ENERGY,
+									//signifies this mission was created by the generator
+									generated: true
 								}
 							});
 							_.forEach(containers, function (container) {
@@ -125,88 +197,174 @@ class Loader extends JobClass {
 					return newMissions;
 				},
 				remove: function (missionMem: any, mission: Mission) {
+					if(!mission.other.generated) {
+						return;
+					}
 					_.forEach(mission.other.containers, function (containerid) {
-						delete missionMem.missions[mission.other.roomName][containerid][mission.other.resourceType];
+						delete missionMem.missions[mission.other.roomName][containerid];
 					});
 				},
 				creepMissionInit: function (creep: CreepClass) {
 					creep.memory.missionStatus = {
 						gettingResource : false,
-						delivering: false,
+						state: 'emptying',
 						target: undefined,
+						extraResources: []
 					}
 				},
 				runMission: function (mission: Mission, creeps: CreepClass[]) : missionResults {
 					var doneCreeps: string[] = [];
-					var removeSites: string[] = [];
+					var removeFromSites: string[] = [];
+					var removeToSites: string[] = [];
+					//mission end due to repository being empty
+					
 					_.forEach(creeps, function (creep) {
-						if(!creep.memory.missionStatus.target) {
+						var state = creep.memory.missionStatus.state;
+						if(!creep.memory.missionStatus.target || state == 'emptying') {
 							return true;
 						}
-						var containerObj = <bag>Game.getObjectById(creep.memory.missionStatus.target);
+						var targetObj = <bag>Game.getObjectById(creep.memory.missionStatus.target);
 
-						if(containerObj instanceof StructureLab) {
-
-						} else if(containerObj instanceof StructurePowerBank) {
-
-						} else if(containerObj instanceof StructurePowerSpawn) {
-
-						} else if(containerObj instanceof StructureTower) {
-
-						} else 
-						//subtracting tower energy cost deals with 
-						//the possibility that the tower might be
-						//actively firing on targets
-						if(towerObj && towerObj.energy > towerObj.energyCapacity - TOWER_ENERGY_COST) {
-							removeSites.push(towerObj.id);
+						if(state == 'delivery' && self.isTargetFull(targetObj, mission.other.resourceType)) {
+							removeToSites.push(targetObj.id);
+							creep.memory.missionStatus.target = undefined;
+						} else if(state == 'pickup' && self.isTargetEmpty(targetObj, mission.other.resourceType)) {
+							removeFromSites.push(targetObj.id);
 							creep.memory.missionStatus.target = undefined;
 						}
 					});
-					// if we have refilled all of the towers then we should remove this mission
-					mission.other.towers = _.difference(mission.other.towers, removeSites);
-					if(mission.other.towers.length == 0) {
-						return {continue: false, creepsToGiveBack: undefined};
+					//figure out if the mission is over, and whether or not it has succeeded.
+					mission.other.to = _.difference(mission.other.to, removeToSites);
+					mission.other.from = _.difference(mission.other.from, removeFromSites);
+					if(mission.other.type == 'fill') {
+						if(mission.other.to.length == 0) {
+							return {continue: false, result: 'success'};
+							//didn't have any of the required resource in the spaces mentioned
+						} else if (mission.other.from.length == 0) {
+							return {continue: false, result: 'failure'};
+						}
+					} else if(mission.other.type == 'empty') {
+						if(mission.other.from.length == 0) {
+							return {continue: false, result: 'success'};
+							//we were trying to empty, but ran out of empty space, go figure
+						} else if(mission.other.to.length == 0) {
+							return {continue: false, result: 'failure'};
+						}
 					}
-					var takenTowers : string[] = [];
-					takenTowers = _.reduce(creeps, function (list, creep) {
-						list.push(creep.memory.missionStatus.target);
-						return list;
-					}, takenTowers);
+
+					//figure out the targets already taken by other creeps working this mission
+					var takenSites : string[] = [];
+					if(mission.other.type == 'fill') {
+						takenSites = _.reduce(creeps, function (list, creep) {
+							if(creep.memory.missionStatus.state == 'delivery') {
+								list.push(creep.memory.missionStatus.target);
+							}
+							return list;
+						}, takenSites);
+					} else if(mission.other.type == 'empty') {
+						takenSites = _.reduce(creeps, function (list, creep) {
+							if(creep.memory.missionStatus.state == 'pickup') {
+								list.push(creep.memory.missionStatus.target);
+							}
+							return list;
+						}, takenSites);
+					}
+
+					//creep control
 					_.forEach(creeps, function (creep) {
-						if(creep.memory.missionStatus.gettingEnergy) {
-							if(self.getEnergy(creep)) {
-								creep.memory.missionStatus.gettingEnergy = false;
-							}
-						} else if(creep.memory.missionStatus.delivering) {
-							if(!creep.memory.missionStatus.target) {
-								var availableSites = _.difference(mission.other.towers, takenTowers);
-								if(availableSites.length == 0) {
-									doneCreeps.push(creep.name);
-									return true;
+						var state = creep.memory.missionStatus.state;
+						// creep has resources which need to be removed before it can act on this mission;
+						if(state == 'emptying') {
+							var resourceCarried = creep.carry[<ResourceConstant>mission.other.resourceType] || 0;
+							if(_.sum(creep.carry) > resourceCarried) {
+								//we are carrying something that isn't part of this mission
+								if(!creep.memory.missionStatus.target) {
+									var range = Game.map.getRoomLinearDistance(mission.other.roomName, self.parentClaim);
+									var closestStorage = <StructureStorage> _.find(self.jobs.logistics.getStoragesAtRange(mission.other.roomName, range), function (storage: StructureStorage){
+										if(storage.store[RESOURCE_ENERGY] != 0) {
+											return true;
+										}
+									});
+									if(!closestStorage) {
+										return true;
+									}
+									creep.memory.missionStatus.extraResources = _.difference(_.keys(creep.carry), [mission.other.resourceType]);
 								}
-								var closestSite = _.min(availableSites, function (site) {
-									var tower = <StructureTower>Game.getObjectById(site);
-									return tower.pos.getRangeTo(creep.pos);
-								});
-								creep.memory.missionStatus.target = closestSite;
-								creep.goal = new GoalClass(undefined, mission.other.roomName, closestSite, {halts: false, range: 1});
-								takenTowers.push(closestSite);
-							}
-							if(creep.arrived()) {
-								var tower = <StructureTower>Game.getObjectById(creep.memory.missionStatus.target);
-								creep.transfer(tower, RESOURCE_ENERGY);
+
+								if(creep.arrived()) {
+									var container = <container>Game.getObjectById(creep.memory.missionStatus.target);
+									_.forEach(creep.memory.missionStatus.extraResources, function (resourceType) {
+										creep.transfer(container, resourceType);
+									});
+								} else {
+									creep.navigate();
+								}
 							} else {
-								creep.navigate();
+								creep.memory.missionStatus.state = '';
+								return true;
 							}
-							
-							if(creep.carry[RESOURCE_ENERGY] == 0) {
+						// creep is picking up or delivering
+						} else if(state == 'pickup' || state == 'delivery') {
+							if(!creep.memory.missionStatus.target) {
+								var sites : string[] = [];
+								var spread = false;
+								if(state == 'pickup') {
+									sites = mission.other.from;
+									if(mission.other.type == 'empty') {
+										spread = true;
+									} else if(mission.other.type == 'fill') {
+										spread = false;
+									}
+								} else if(state == 'delivery') {
+									sites = mission.other.to;
+									if(mission.other.type == 'empty') {
+										spread = false;
+									} else if(mission.other.type == 'fill') {
+										spread = true;
+									}
+								}
+								var available = sites;
+								if(spread) {
+									available = _.difference(sites, takenSites);
+								}
+								if(available.length == 0) {
+									available = sites;
+								}
+								var closest = _.min(available, function (siteid : string) {
+									var obj = <bag>Game.getObjectById(siteid);
+									return obj.pos.getRangeTo(creep.pos);
+								});
+								creep.memory.missionStatus.target = closest;
+								var obj = <bag>Game.getObjectById(closest);
+								var roomName = obj ? obj.pos.roomName : mission.other.roomName;
+								creep.goal = new GoalClass(undefined, roomName, closest, {halts: false, range: 1});
+							}
+						
+							if(creep.arrived()) {
+								var target : bag = <bag>Game.getObjectById(creep.memory.missionStatus.target);
+								if(creep.memory.missionStatus.state == 'pickup') {
+									creep.withdraw(target, mission.other.resourceType);
+								} else if(creep.memory.missionStatus.state == 'delivery') {
+									creep.transfer(target, mission.other.resourceType);
+								}
+							}
+
+							var carrying = creep.carry[<ResourceConstant>mission.other.resourceType] || 0;
+							//once we are out of the resource we picked up, we should 
+							if(carrying == creep.carryCapacity && state == 'pickup') {
+								creep.memory.missionStatus.state = 'delivery';
+							} else if(carrying == 0 && state == 'delivery') {
 								doneCreeps.push(creep.name);
 							}
+						//need to figure out what to do with this creep
 						} else {
-							if(creep.carry[RESOURCE_ENERGY] == creep.carryCapacity) {
-								creep.memory.missionStatus.delivering = true;
+							var carried = creep.carry[<ResourceConstant>mission.other.resourceType] || 0;
+							if(carried == creep.carryCapacity) {
+								creep.memory.missionStatus.state = 'delivery';
+							} else if(creep.carryCapacity == _.sum(creep.carry)) {
+								creep.memory.missionStatus.state = 'empty';
 							} else {
-								creep.memory.missionStatus.gettingEnergy = true;
+								creep.memory.missionStatus.state = 'pickup';
 							}
 						}
 					});
@@ -215,132 +373,111 @@ class Loader extends JobClass {
 						continue: true
 					};
 				}
-			},
-			spawnReplenish: {
-				init: function (missionMem: any) : void {
-					missionMem.missions = {};
-				},
-				new: function (missionMem: any, rooms: string[]) : Mission[] {
-					var newMissions : Mission[] = [];
-					_.forEach(rooms, function (roomName) {
-						var room = Game.rooms[roomName];
-						if(!room) {
-							return true;
-						}
-						if(!room.controller || !room.controller.my) {
-							return true;
-						}
-						var containers : (StructureSpawn | StructureExtension)[] = room.find(FIND_MY_STRUCTURES, {filter: function (struct : OwnedStructure) {
-							if(struct.structureType != STRUCTURE_SPAWN && struct.structureType != STRUCTURE_EXTENSION) {
-								return false;
-							}
-							var container : StructureSpawn | StructureExtension = <StructureSpawn|StructureExtension>struct;
-							if(container.energy == container.energyCapacity) {
-								return false;
-							}
-							var exists = _.get(missionMem.missions, roomName + '.' + container.id, false);
-							if(exists) {
-								return false;
-							}
-							return true;
-						}});
-						if(containers.length == 0) {
-							return true;
-						}
-						var neededEnergy = _.reduce(containers, function(total, container) {
-							return (total + (container.energyCapacity - container.energy));
-						}, 0);
-						var maxWorkers = Math.ceil(neededEnergy / self.loaderCarry());
-						var containerList = _.map(containers, function (container) { return container.id});
-						newMissions.push({
-							missionName: 'spawnReplenish',
-							maxWorkers: maxWorkers,
-							runner: 'runMission',
-							missionInit: 'creepMissionInit',
-							creeps: [],
-							priority: 1,
-							other: {
-								roomName: roomName,
-								containers: containerList
-							}
-						});
-						_.forEach(containerList, function (containerid) {
-							_.set(missionMem.missions, roomName + '.' + containerid, true);
-						});
-					});
-					return newMissions;
-				},
-				remove: function (missionMem: any, mission: Mission) : void {
-					_.forEach(mission.other.containers, function (containerid) {
-						delete missionMem.missions[mission.other.roomName][containerid];
-					});
-				},
-				creepMissionInit: function (creep : CreepClass) : void {
-					creep.memory.missionStatus = {
-						gettingEnergy: false,
-						delivery: false,
-						target: undefined,
-					}
-				},
-				runMission:  function (mission: Mission, creeps: CreepClass[]) : missionResults {
-					var doneCreeps : string[] = [];
-					var removeSites : string[] = [];
-					_.forEach(creeps, function (creep) {
-						if(!creep.memory.missionStatus.target) {
-							return true;
-						}
-						var container = <StructureSpawn | StructureExtension>Game.getObjectById(creep.memory.missionStatus.target);
-						if(container.energy == container.energyCapacity || !container) {
-							removeSites.push(creep.memory.missionStatus.target);
-							creep.memory.missionStatus.target = undefined;
-						}
-					});
-					mission.other.containers = _.difference(mission.other.containers, removeSites);
-					if(mission.other.containers.length == 0) {
-						return {continue: false, creepsToGiveBack: undefined};
-					}
-					var takenSites : string[] = [];
-					takenSites = _.reduce(creeps, function(list, creep) {
-						list.push(creep.memory.missionStatus.target);
-						return list;
-					}, takenSites);
-					_.forEach(creeps, function (creep) {
-						if(creep.memory.missionStatus.gettingEnergy) {
-							if(self.getEnergy(creep)) {
-								creep.memory.missionStatus.gettingEnergy = false;
-							}
-						} else if(creep.memory.missionStatus.delivery) {
-							if(!creep.memory.missionStatus.target) {
-								var availableSites = _.difference(mission.other.containers, takenSites);
-								if(availableSites.length == 0) {
-									doneCreeps.push(creep.name);
-								}
-								var closestSite = _.min(availableSites, function (siteid) {
-									var container = <Structure>Game.getObjectById(siteid);
-									return container.pos.getRangeTo(creep.pos);
-								});
-							}
-
-
-							if(creep.carry[RESOURCE_ENERGY] == 0) {
-								doneCreeps.push(creep.name);
-							}
-						} else {
-							if(creep.carry[RESOURCE_ENERGY] == creep.carryCapacity) {
-								creep.memory.missionStatus.delivery = true;
-							} else {
-								creep.memory.missionStatus.gettingEnergy = true;
-							}
-						}
-						
-					});
-					return {
-						continue: true, 
-						creepsToGiveBack: doneCreeps
-					};
-				}
 			}
 		}
 	}
+	addCreep(creepName: string) {
+		var self = this;
+		super.addCreep(creepName);
+		var roomName = self.creeps[creepName].memory.goal;
+		self.creeps[creepName].memory.baseRoom = roomName;
+	}
+	updateRequisitions () {
+		var self = this;
+		var roomsNeedingLoaders : string[] = [];
+		_.forEach(self.memory.missions, function (missions, priority) {
+			_.forEach(missions, function (mission) {
+				var roomName = mission.other.roomName;
+				if(!roomName) {
+					return true;
+				}
+				var room = Game.rooms[roomName];
+				if(room && room.controller && room.controller.my) {
+					roomsNeedingLoaders.push(roomName);
+				}
+			});
+		});
+		var currentLoaders = _.groupBy(self.creeps, function (creep) {
+			return creep.memory.baseRoom;
+		});
+		var requisitions : creepDescription[] = [];
+		_.forEach(roomsNeedingLoaders, function (roomName) {
+			var room = Game.rooms[roomName];
+			if(!room) {
+				return true;
+			}
+			var requiredLoaders = 1;
+			if(self.parentClaim == roomName) {
+				requiredLoaders++;
+			}
+			if(room.controller && room.controller.level >= 7) {
+				requiredLoaders++;
+			}
 
+			if(currentLoaders[roomName].length <= requiredLoaders) {
+				return true;
+			}
+			var power = self.loaderCarry() / 50;
+
+			requisitions.push({
+				power: power,
+				type: 'transporter',
+				memory: {},
+				id: roomName,
+				jobName: self.name,
+				parentClaim: self.parentClaim,
+				waitingSince: Game.time,
+				newClaim: undefined
+			});
+		});
+		self.jobs.spawn.addRequisition(requisitions);
+	}
+	assignMissions() {
+		var self = this;
+		var freeWorkers = self.getFreeWorkers();
+		var groupedFreeWorkers = _.groupBy(freeWorkers, function (creep) {
+			return creep.memory.baseRoom;
+		});
+		var priorities = _.keys(self.memory.missions).sort();
+		_.forEach(priorities, function (priority) {
+			var freeWorkers = self.getFreeWorkers();
+			if(freeWorkers.length == 0) {
+				return false;
+			}
+			var priorityMissions = self.memory.missions[priority];
+			if(priorityMissions.length == 0) {
+				return true;
+			}
+			_.forEach(priorityMissions, function (mission: Mission){
+				var roomName = mission.other.roomName || self.parentClaim;
+				var workersAvailable = groupedFreeWorkers[roomName];
+				if(mission.maxWorkers <= mission.creeps.length) {
+					return true;
+				} else if(workersAvailable.length == 0) {
+					return true;
+				} else if(mission.maxWorkers > mission.creeps.length + workersAvailable.length) {
+					//all remaining creeps can be assigned to this mission
+					mission.creeps.push(..._.map(workersAvailable, function (creep) {
+						creep.cleanup([]);
+						self.missionGenerators[mission.missionName][mission.missionInit](creep);
+						creep.memory.onMission = true;
+						return creep.name;
+					}));
+					groupedFreeWorkers[roomName] = [];
+					return false;
+				} else {
+					// assign some creeps to this mission
+					var neededWorkers = mission.maxWorkers - mission.creeps.length;
+					mission.creeps.push(..._.map(_.take(workersAvailable, neededWorkers), function (creep) {
+						creep.cleanup([]);
+						self.missionGenerators[mission.missionName][mission.missionInit](creep);
+						creep.memory.onMission = true;
+						return creep.name;
+					}));
+					groupedFreeWorkers[roomName] = _.takeRight(workersAvailable, workersAvailable.length - neededWorkers);
+					return true;
+				}
+			});
+		});
+	}
 }

@@ -56,7 +56,9 @@ interface JobDefinitionList {
     roomworker : typeof RoomworkerJob,
     links : typeof LinkJob,
     protector : typeof ProtectorJob,
-    tower : typeof TowerJob
+    tower : typeof TowerJob,
+    loader : typeof Loader,
+    initial : typeof InitialRoom
 }
 
 namespace NodeJS {

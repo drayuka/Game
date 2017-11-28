@@ -35,7 +35,8 @@ interface JobList {
     roomworker : RoomworkerJob,
     links : LinkJob,
     protector : ProtectorJob,
-    tower : TowerJob
+    tower : TowerJob,
+    loader : Loader
 }
 
 interface roomDirectory {

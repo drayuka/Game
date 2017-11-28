@@ -11,7 +11,9 @@ global.jobClasses = {
     roomworker: <typeof RoomworkerJob>require('job.roomworker'),
     links: <typeof LinkJob>require('job.links'),
     protector: <typeof ProtectorJob>require('job.protector'),
-    tower: <typeof TowerJob>require('job.tower')
+    tower: <typeof TowerJob>require('job.tower'),
+    loader: <typeof Loader>require('job.loader'),
+    initial: <typeof InitialRoom>require('job.initial')
 }
 global.utils = require('utils');
 global.goal = require('goal');
