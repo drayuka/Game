@@ -144,10 +144,10 @@ class JobClass {
         }
         var goalId = myCreep.memory.goal;
         if(!goalId) {
-            throw new Error('adding creep with no goal ' + creepName);
+            console.log('adding creep with no goal ' + creepName);
         }
         if(!self.goals[goalId]) {
-            throw new Error('adding creep: ' + creepName + ' with goal that doesnt exist ' + goalId);
+            console.log('adding creep: ' + creepName + ' with goal that doesnt exist ' + goalId);
         }
         self.assignCreepToGoal(creepName, myCreep.memory.goal);
     }
