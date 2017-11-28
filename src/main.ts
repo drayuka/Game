@@ -32,6 +32,23 @@ module.exports.loop = function () {
         console.log(e.stack);
         debugger;
     }
+
+    try {
+        global.spawn.execute();
+    } catch (e) {
+        console.log('global spawn job had the following error:');
+        console.log(e.stack);
+        debugger;
+    }
+
+    try {
+        global.scout.execute();
+    } catch (e) {
+        console.log('global scout job had the following error:');
+        console.log(e.stack);
+        debugger;
+    }
+
     try{
         global.bootstrap.execute();
     } catch(e) {
