@@ -13,7 +13,7 @@ class InitialRoom extends MissionJobClass {
 				init: function (missionMem: any) {
 					missionMem.missions = {};
 				},
-				new: function (missionMem: any, rooms: strings[]) : Mission[] {
+				new: function (missionMem: any, rooms: string[]) : Mission[] {
 					var newMissions : Mission[] = [];
 					_.forEach(rooms, function (roomName) {
 
