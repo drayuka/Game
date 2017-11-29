@@ -6,6 +6,7 @@
     "grunt-screeps": "~1.2.1"
   },
   "dependencies": {
-    "@types/node": "^8.0.26"
+    "@types/node": "^8.0.26",
+    "immutable": "^3.8.2"
   }
 }
