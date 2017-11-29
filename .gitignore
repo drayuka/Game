@@ -1,8 +1,8 @@
 
-Gruntfile.js
 /node_modules/*
 /typings/*
 /dist/*
 
 *.sublime-workspace
 *.DS_Store
+.screeps.json
