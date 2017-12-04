@@ -1,18 +1,20 @@
 
 var utils = require('utils');
-var goal = require('goal');
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+import { MissionJobClass } from "./mission.job"
+import { Mission } from "./mission.job"
+import { MissionGenerators } from "./mission.job"
+import { missionResults } from "./mission.job"
 
-interface missionResults {
-	continue: boolean,
-	creepsToGiveBack?: string[],
-	result?: string
-}
+
 
 type container = StructureStorage | StructureTerminal | StructureContainer;
 type energyUser = StructureTower | StructureSpawn | StructureExtension | StructureLink;
 type bag = container | energyUser |  StructureLab | StructurePowerSpawn | StructurePowerBank | StructureNuker;
 
-class Loader extends MissionJobClass {
+export class LoaderJob extends MissionJobClass {
 	_loaderCarry: number;
 	execute () {
 		var self = this;

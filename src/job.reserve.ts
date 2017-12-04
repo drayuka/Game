@@ -6,12 +6,13 @@
  * var mod = require('job');
  * mod.thing == 'a thing'; // true
  */
-var utils = require('utils');
-var goal = require('goal');
-var job = require('job');
-var creep = require('creep');
+
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
 // can be called with just name, or with target as well
-class ReserveJob extends JobClass {
+export class ReserveJob extends JobClass {
     execute() {
         var self = this;
         self.reassessSites();
@@ -99,4 +100,3 @@ class ReserveJob extends JobClass {
         }
     }
 }
-module.exports = ReserveJob;

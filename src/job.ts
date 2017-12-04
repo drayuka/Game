@@ -7,7 +7,16 @@
  * mod.thing == 'a thing'; // true
  */
 // can be called with just name, or with target as well
-class JobClass {
+
+
+import "./types";
+import { GoalList } from "./init";
+import { CreepList } from "./init";
+import { JobList } from "./bootstrap";
+import { GoalClass } from "./goal";
+import { CreepClass } from "./creep";
+
+export class JobClass {
     /*
     * name - the name of the job
     * types - types of creep that can do this job, defaults to worker.
@@ -92,7 +101,7 @@ class JobClass {
         if(!meta) {
             meta = {};
         }
-        var ngoal = new global.goal(self, roomName, roomName, meta);
+        var ngoal = new GoalClass(self, roomName, roomName, meta);
         if(self.goals[ngoal.id]) {
             throw new Error('already have goal with id ' + ngoal.id);
         }
@@ -218,4 +227,3 @@ class JobClass {
         });
     }
 }
-module.exports = JobClass;

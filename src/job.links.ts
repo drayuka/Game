@@ -6,16 +6,19 @@
  * var mod = require('job');
  * mod.thing == 'a thing'; // true
  */
+
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
 type link  = RoomPosition | StructureLink | ConstructionSite;
 interface roomLinks {
     sourceLinks: link[],
     controllerLink: link | undefined,
     storageLinks: link[]
 }
-var utils = require('utils');
-var goal = require('goal');
 // can be called with just name, or with target as well
-class LinkJob extends JobClass {
+export class LinkJob extends JobClass {
     _links : roomLinks;
     execute () {
         var self = this;
@@ -309,7 +312,7 @@ class LinkJob extends JobClass {
             var distance;
             return upgraderPositions.length;
         });
-        var upgraderPositions = utils.openPositionsAround([{pos: linkPosition, range: 1}], {noRaods: true});
+        var upgraderPositions = utils.openPositionsAround([{pos: linkPosition, range: 1}], {noRoads: true});
         if(upgraderPositions.length != 0) {
             var upgradeGoal = self.jobs.upgrade.goals[room.controller.id];
             if(upgradeGoal.meta.storage) {
@@ -536,4 +539,3 @@ class LinkJob extends JobClass {
         }
     }
 }
-module.exports = LinkJob;

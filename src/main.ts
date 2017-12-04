@@ -3,13 +3,13 @@
 
 global.Version = 'Mining';
 
-var oneTimePatchRunner = require('patchHarness');
-var init = require('init');
+import { oneTimePatch } from "./patchHarness";
+import { init } from "./init"
 
 //we should only ever run through oneTimePatch when we have to 
 //re-build code(which happens on a commit)
 try {
-    oneTimePatchRunner(false);
+    oneTimePatch(false);
 } catch (e) {
     console.log('one time patch runner pre init had the following error: ');
     console.log(e.stack);
@@ -26,7 +26,7 @@ module.exports.loop = function () {
         debugger;
     }
     try {
-        oneTimePatchRunner(true);
+        oneTimePatch(true);
     } catch(e) {
         console.log('one time patch runner post init had the following error: ');
         console.log(e.stack);
@@ -55,5 +55,14 @@ module.exports.loop = function () {
         console.log('global bootstrap job had the following error: ');
         console.log(e.stack);
         debugger;
+    }
+
+    try {
+        var segments : number[] = [];
+        segments = _.reduce(global.requestSegments, function (ary, segment : number){
+            ary.push(segment);
+            return ary;
+        }, segments);
+        RawMemory.setActiveSegments(segments);
     }
 };

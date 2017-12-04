@@ -6,9 +6,12 @@
  * var mod = require('type.worker');
  * mod.thing == 'a thing'; // true
  */
-var goal = require('goal');
 
-class CreepClass extends Creep {
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+
+export class CreepClass extends Creep {
     _path: RoomPosition[] | undefined;
     _job: JobClass;
     _goal: GoalClass;
@@ -33,7 +36,7 @@ class CreepClass extends Creep {
     }
     moveOffRoad () : void {
         var self = this;
-        if(global.utils.getRoadAtPos(self.pos)) {
+        if(utils.getRoadAtPos(self.pos)) {
             let room: Room;
             if(Game.rooms[self.pos.roomName]) {
                 room = Game.rooms[self.pos.roomName];
@@ -127,7 +130,7 @@ class CreepClass extends Creep {
         var self = this;
         if(self._path === undefined) {
             if(self.memory.path) {
-                self._path = global.utils.deserializePath(self.memory.path);
+                self._path = utils.deserializePath(self.memory.path);
                 return self._path;
             }
             return undefined;
@@ -139,7 +142,7 @@ class CreepClass extends Creep {
         var self = this;
         self._path = path;
         if(path !== undefined) {
-            self.memory.path = global.utils.serializePath(path);
+            self.memory.path = utils.serializePath(path);
         } else {
             delete self.memory.path;
         }
@@ -158,7 +161,7 @@ class CreepClass extends Creep {
         if(!self.memory.path || self.memory.path.length == 0) {
             let targets: distancePos[];
             if(self.goal.roomName != self.pos.roomName) {
-                var roomPath = global.utils.getRoomPath(self.pos.roomName, self.goal.roomName);
+                var roomPath = utils.getRoomPath(self.pos.roomName, self.goal.roomName);
                 if(typeof roomPath === 'number') {
                     throw new Error('could not path from ' + self.pos.roomName + ' to ' + self.goal.roomName);
                 }
@@ -198,7 +201,7 @@ class CreepClass extends Creep {
         var self = this;
         if(!self.memory.path || self.memory.path.length == 0) {
             let targets: distancePos[];
-            var roomPath = global.utils.getRoomPath(self.pos.roomName, roomName);
+            var roomPath = utils.getRoomPath(self.pos.roomName, roomName);
             // got an error back when trying to path to that room
             if(typeof roomPath === 'number') {
                 throw new Error('could not path from ' + self.pos.roomName + ' to ' + roomName);
@@ -271,7 +274,7 @@ class CreepClass extends Creep {
         var self = this;
         var roomCostFunction = self.roomCostsFunction;
         if(flee) {
-            roomCostFunction = global.utils.workerRoomCostsGenerator(false, true);
+            roomCostFunction = utils.workerRoomCostsGenerator(false, true);
         }
         var ret = PathFinder.search(self.pos, goals, {
 		    plainCost: 2,
@@ -282,5 +285,3 @@ class CreepClass extends Creep {
 	    return ret.path;
     }
 };
-
-module.exports = CreepClass;

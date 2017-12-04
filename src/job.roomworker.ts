@@ -7,26 +7,15 @@
  * mod.thing == 'a thing'; // true
  */
 
-interface MissionGenerator {
-    [key: string]: Function
-}
-interface MissionGenerators {
-    [key: string]: MissionGenerator
-}
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+import { MissionJobClass } from "./mission.job"
+import { Mission } from "./mission.job"
+import { MissionGenerators } from "./mission.job"
 
-interface Mission {
-    missionName: string,
-    maxWorkers: number,
-    runner: string,
-    missionInit: string,
-    creeps: string[],
-    priority: number,
-    other: any
-}
-
-var utils = require('utils');
-var goal = require('goal');
-class RoomworkerJob extends MissionJobClass {
+export class RoomworkerJob extends MissionJobClass {
     execute () {
         var self = this;
         self.updateRequisition();
@@ -538,5 +527,3 @@ class RoomworkerJob extends MissionJobClass {
         }]);
     }
 }
-
-module.exports = RoomworkerJob;

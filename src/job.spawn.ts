@@ -68,15 +68,17 @@ interface goalRequistions {
     }
 }
 
-interface creepDescription {
-    power: number,
-    type: string,
-    memory: any,
-    id: any,
-    jobName: string,
-    parentClaim: string,
-    waitingSince: number,
-    newClaim: string[] | undefined
+declare global {
+    interface creepDescription {
+        power: number,
+        type: string,
+        memory: any,
+        id: any,
+        jobName: string,
+        parentClaim: string,
+        waitingSince: number,
+        newClaim: string[] | undefined
+    }
 }
 
 
@@ -158,8 +160,14 @@ var creepTypes : {[key: string]: creepType} = {
         ]
     }
 };
+
+import { Utils as utils } from "./utils";
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+import { JobList } from "./bootstrap";
 //this is a job for ease of use, it doesn't really make sense for spawn to have goals;
-class SpawnJob extends JobClass {
+export class SpawnJob extends JobClass {
     altSpawnRooms : {[key: string]: {[key: string] : number}};
     _requisitions : jobRequisitions | undefined;
     constructor() {
@@ -264,7 +272,7 @@ class SpawnJob extends JobClass {
             }
 
             //add the creep to its job
-            global.bootstrap.claimedRooms[parentClaim].jobs[jobName].addCreep(creep.name);
+            (<JobClass>(<any>global.bootstrap.claimedRooms[parentClaim].jobs)[jobName]).addCreep(creep.name);
         });
     }
     updateSpawns() {
@@ -620,7 +628,7 @@ class SpawnJob extends JobClass {
         if(creepDesc.newClaim ) {
             spawnRooms = _.difference(spawnRooms, creepDesc.newClaim);
         }
-        var rooms = utils.getRoomsAtRange(creepDesc.parentClaim);
+        var rooms = utils.getRoomsAtRange(creepDesc.parentClaim, 10);
         var altSpawnRooms : {[key:string]: number} = {};
         _.forEach(spawnRooms, function (roomName) {
             if(roomName == creepDesc.parentClaim) {
@@ -632,4 +640,3 @@ class SpawnJob extends JobClass {
         return altSpawnRooms;
     }
 }
-module.exports = SpawnJob;

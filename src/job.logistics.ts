@@ -6,10 +6,11 @@
  * var mod = require('job.upgradeController');
  * mod.thing == 'a thing'; // true
  */
-var job = require('job');
-var goal = require('goal');
-var utils = require('utils');
-class LogisticsJob extends JobClass {
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+export class LogisticsJob extends JobClass {
     execute() {
         var self = this;
         self.updateRoutes();
@@ -45,7 +46,7 @@ class LogisticsJob extends JobClass {
             var ret = PathFinder.search(urgoal.target.pos, goals, {
                 plainCost: 2,
                 swampCost: 10,
-                roomCallback: utils.workerRoomCostsGenerator()
+                roomCallback: utils.workerRoomCostsGenerator(true, false)
             });
             if(ret.incomplete) {
                 return true;
@@ -251,4 +252,3 @@ class LogisticsJob extends JobClass {
         });
     }
 }
-module.exports = LogisticsJob;

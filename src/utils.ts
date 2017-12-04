@@ -6,12 +6,41 @@
  * var mod = require('utils');
  * mod.thing == 'a thing'; // true
  */
- interface failedPos {
-     unownedRoom: {[key: string] : RoomPosition},
-     noConstruction: RoomPosition[],
-     noVisibility: RoomPosition[]
- }
-class Utils {
+ declare global {
+    interface failedPos {
+        unownedRoom: {[key: string] : RoomPosition},
+        noConstruction: RoomPosition[],
+        noVisibility: RoomPosition[]
+    }
+    interface distancePos {
+        pos: RoomPosition,
+        range: number
+    }
+    /*
+        a pos with range-from-pos information attached
+    */
+    interface rangePos {
+        pos: RoomPosition,
+        minRange: number,
+        maxRange: number
+    }
+    //serialized room position [x,y, roomName]
+    interface roomPos {
+        x: number, 
+        y: number
+        rn: string
+    }
+    interface openPositionsOptions {
+        noRoads?: boolean,
+        noHaltingCreeps?: boolean
+    }
+}
+
+function isDistancePos(pos: distancePos | rangePos)    : pos is distancePos {
+    return (typeof (<distancePos>pos).range) !== undefined;
+}
+
+export class Utils {
     /* requires that you have vision into all rooms that the positions are in
     / options - {
         noRoads - boolean - set if you don't want to return "open" positions with roads
@@ -213,7 +242,7 @@ class Utils {
             costsMatrix.set(pos.x, pos.y, 255);
         });
     }
-    static workerRoomCosts(): (roomName: string) => CostMatrix | undefined {
+    static workerRoomCosts(): (roomName: string) => CostMatrix {
         return Utils.workerRoomCostsGenerator(false, false)
     }
     static applyMyCreepCosts(costsMatrix: CostMatrix, roomName: string) {
@@ -235,11 +264,11 @@ class Utils {
             }
         });
     }
-    static workerRoomCostsGenerator(ignoreCreeps: boolean, notLeaveRoom: boolean) : (roomName: string) => CostMatrix | undefined {
-        return function(roomName: string) : CostMatrix | undefined {
+    static workerRoomCostsGenerator(ignoreCreeps: boolean, notLeaveRoom: boolean) : (roomName: string) => CostMatrix {
+        return function(roomName: string) : CostMatrix {
             var room = Game.rooms[roomName];
             if(!room) {
-                return;
+                return new PathFinder.CostMatrix();
             }
             var costs = Utils.getBaseCosts(roomName);
 
@@ -291,5 +320,3 @@ class Utils {
         return costs;
     }
 };
-
-module.exports = Utils;

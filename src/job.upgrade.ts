@@ -6,10 +6,11 @@
  * var mod = require('job.upgradeController');
  * mod.thing == 'a thing'; // true
  */
-var job = require('job');
-var goal = require('goal');
-var utils = require('utils');
-class UpgradeJob extends JobClass {
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+import { Utils as utils } from "./utils"
+export class UpgradeJob extends JobClass {
     execute() {
         var self = this;
         self.updateWaits();

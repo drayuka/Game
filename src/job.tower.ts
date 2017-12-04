@@ -1,10 +1,10 @@
-var job = require('job');
+import { JobClass } from "./job";
 
 interface creepRoomList {
 	[key: string]: Creep[]
 }
 
-class TowerJob extends JobClass {
+export class TowerJob extends JobClass {
 	enemyCreeps : creepRoomList;
 	execute() {
 		var self = this;

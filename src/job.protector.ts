@@ -6,12 +6,13 @@
  * var mod = require('job');
  * mod.thing == 'a thing'; // true
  */
-var utils = require('utils');
-var goal = require('goal');
-var job = require('job');
-var creep = require('creep');
 
-class ProtectorJob extends JobClass {
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+
+export class ProtectorJob extends JobClass {
     execute() {
         var self = this;
         self.reassessProtectionRooms();
@@ -162,4 +163,3 @@ class ProtectorJob extends JobClass {
         }
     }
 }
-module.exports = ProtectorJob;

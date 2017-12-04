@@ -6,12 +6,14 @@
  * var mod = require('job');
  * mod.thing == 'a thing'; // true
  */
-var utils = require('utils');
-var goal = require('goal');
-var job = require('job');
-var creep = require('creep');
+
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+import { JobList } from "./bootstrap";
 // can be called with just name, or with target as well
-class ScoutJob extends JobClass {
+export class ScoutJob extends JobClass {
     _observers: StructureObserver[];
     constructor() {
         super('scout','scout',<JobList>{spawn: global.spawn})

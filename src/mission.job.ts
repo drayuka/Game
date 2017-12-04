@@ -1,4 +1,32 @@
-class MissionJobClass extends JobClass {
+
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+
+export interface MissionGenerator {
+    [key: string]: Function
+}
+export interface MissionGenerators {
+    [key: string]: MissionGenerator
+}
+
+export interface Mission {
+    missionName: string,
+    maxWorkers: number,
+    runner: string,
+    missionInit: string,
+    creeps: string[],
+    priority: number,
+    other: any
+}
+
+export interface missionResults {
+  continue: boolean,
+  creepsToGiveBack?: string[],
+  result?: string
+}
+
+export class MissionJobClass extends JobClass {
 	get missionGenerators () : MissionGenerators {
 		throw new Error('subclasses of missionjobclass must implement missionGenerators');
 	}

@@ -36,7 +36,7 @@ var patches : Patches = {
 	}
 };
 
-var oneTimePatch = function(postInit : boolean) {
+export var oneTimePatch = function(postInit : boolean) {
 	if(Game.rooms['sim']) {
 		return;
 	}
@@ -64,5 +64,3 @@ var oneTimePatch = function(postInit : boolean) {
 		currentPatches[patchName].ran = true;
 	});
 }
-
-module.exports = oneTimePatch;

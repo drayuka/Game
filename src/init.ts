@@ -1,25 +1,56 @@
 
-global.jobClasses = {
-    upgrade: <typeof UpgradeJob>require('job.upgradeController'),
-    spawn: <typeof SpawnJob>require('job.spawn'),
-    harvest: <typeof HarvestJob>require('job.harvest'),
-    logistics: <typeof LogisticsJob>require('job.logistics'),
-    bootstrap: <typeof BootstrapJob>require('job.bootstrap'),
-    claim: <typeof ClaimJob>require('job.claim'),
-    scout: <typeof ScoutJob>require('job.scout'),
-    reserve: <typeof ReserveJob>require('job.reserve'),
-    roomworker: <typeof RoomworkerJob>require('job.roomworker'),
-    links: <typeof LinkJob>require('job.links'),
-    protector: <typeof ProtectorJob>require('job.protector'),
-    tower: <typeof TowerJob>require('job.tower'),
-    loader: <typeof Loader>require('job.loader'),
-    initial: <typeof InitialRoom>require('job.initial')
+import { UpgradeJob } from "./job.upgrade";
+import { SpawnJob } from "./job.spawn";
+import { HarvestJob } from "./job.harvest"
+import { LogisticsJob } from "./job.logistics"
+import { Bootstrap } from "./bootstrap"
+import { ClaimJob } from "./job.claim"
+import { ScoutJob } from "./job.scout"
+import { ReserveJob } from "./job.reserve"
+import { RoomworkerJob } from "./job.roomworker"
+import { LinkJob } from "./job.links"
+import { ProtectorJob } from "./job.protector"
+import { TowerJob } from "./job.tower"
+import { LoaderJob } from "./job.loader"
+import { InitialRoomJob } from "./job.initial"
+
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+
+
+interface oldCreepList {
+    [key: string]: Creep
 }
-global.utils = require('utils');
-global.goal = require('goal');
+export interface CreepList {
+    [key: string]: CreepClass
+}
+export interface GoalList {
+    [key: string]: GoalClass
+}
+
+global.jobClasses = {
+    upgrade: UpgradeJob,
+    spawn: SpawnJob,
+    harvest: HarvestJob,
+    logistics: LogisticsJob,
+    claim: ClaimJob,
+    scout: ScoutJob,
+    reserve: ReserveJob,
+    roomworker: RoomworkerJob,
+    links: LinkJob,
+    protector: ProtectorJob,
+    tower: TowerJob,
+    loader: LoaderJob,
+    initial: InitialRoomJob
+}
 global.username = 'shockfist';
 
-var initialize = function () {
+export var init = function () {
+    if(!global.requestSegments) {
+        global.requestSegments = [];
+    }
+
     if(!global.memory || JSON.stringify(global.memory) != RawMemory.get()) {
         global.memory = JSON.parse(RawMemory.get())
         console.log('had to parse memory');
@@ -62,14 +93,10 @@ var initialize = function () {
         debugger;
     }
     try {
-        global.bootstrap = new global.jobClasses.bootstrap();
+        global.bootstrap = new Bootstrap();
     } catch (e) {
         console.log('had the following error when instantiating bootstrap');
         console.log(e.stack);
         debugger; 
     }
-
-
 };
-
-module.exports = initialize;

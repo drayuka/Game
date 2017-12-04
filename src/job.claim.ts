@@ -6,11 +6,13 @@
  * var mod = require('job');
  * mod.thing == 'a thing'; // true
  */
-var utils = require('utils');
-var goal = require('goal');
-var job = require('job');
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+
 // can be called with just name, or with target as well
-class ClaimJob extends JobClass {
+export class ClaimJob extends JobClass {
     execute() {
         var self = this;
         self.reassessSites();
@@ -93,4 +95,3 @@ class ClaimJob extends JobClass {
         }
     }
 }
-module.exports = ClaimJob;

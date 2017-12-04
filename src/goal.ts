@@ -6,7 +6,11 @@
  * var mod = require('goal');
  * mod.thing == 'a thing'; // true
  */
-class GoalClass {
+
+import { Utils as utils } from "./utils"
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+export class GoalClass {
     job: JobClass | undefined;
     roomName: string;
     id: string;

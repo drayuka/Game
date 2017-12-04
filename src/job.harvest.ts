@@ -6,11 +6,11 @@
  * var mod = require('job.upgradeController');
  * mod.thing == 'a thing'; // true
  */
-var job = require('job');
-var goal = require('goal');
-var utils = require('utils');
-var creep = require('creep');
-class HarvestJob extends JobClass {
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+export class HarvestJob extends JobClass {
     execute() {
         var self = this;
         self.updateStorages();
@@ -56,7 +56,7 @@ class HarvestJob extends JobClass {
                 }});
 
                 if(sites.length == 0) {
-                    var positions = utils.openPositionsAround([{pos: goal.target.pos, minRange: 1, maxRange: 1}], {noHaltingCreeps: 1});
+                    var positions = utils.openPositionsAround([{pos: goal.target.pos, minRange: 1, maxRange: 1}], {noHaltingCreeps: true});
                     if(goal.target && goal.target.room) {
                         goal.target.room.createConstructionSite(positions[0], STRUCTURE_CONTAINER);
                     } else {
