@@ -1,4 +1,13 @@
-class InitialRoom extends MissionJobClass {
+
+import { Utils as utils } from "./utils"
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+import { MissionJobClass } from "./mission.job"
+import { Mission } from "./mission.job"
+import { MissionGenerators } from "./mission.job"
+
+export class InitialRoomJob extends MissionJobClass {
 	execute () {
 		var self = this;
 		self.generateMissions();
