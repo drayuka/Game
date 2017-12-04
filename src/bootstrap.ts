@@ -7,8 +7,24 @@
  * mod.thing == 'a thing'; // true
  */
 var utils = require('utils');
-var goal = require('goal');
-var job = require('job');
+import { UpgradeJob } from "./job.upgrade";
+import { SpawnJob } from "./job.spawn";
+import { HarvestJob } from "./job.harvest"
+import { LogisticsJob } from "./job.logistics"
+import { ClaimJob } from "./job.claim"
+import { ScoutJob } from "./job.scout"
+import { ReserveJob } from "./job.reserve"
+import { RoomworkerJob } from "./job.roomworker"
+import { LinkJob } from "./job.links"
+import { ProtectorJob } from "./job.protector"
+import { TowerJob } from "./job.tower"
+import { LoaderJob } from "./job.loader"
+import { InitialRoomJob } from "./job.initial"
+
+import { GoalClass } from "./goal";
+import { JobClass } from "./job";
+import { CreepClass } from "./creep";
+
 
 interface roomMemory {
     upgrading : boolean,
@@ -24,11 +40,30 @@ interface roomMemory {
     protector : boolean,
     storage : boolean,
 }
-interface JobList {
+
+var jobNames = [
+    'upgrade',
+    'spawn',
+    'harvest',
+    'logistics',
+    'bootstrap',
+    'claim',
+    'scout',
+    'reserve',
+    'roomworker',
+    'links',
+    'protector',
+    'tower',
+    'loader',
+    'initial'
+];
+
+export interface JobList {
     upgrade : UpgradeJob,
     spawn : SpawnJob,
     harvest : HarvestJob,
     logistics : LogisticsJob,
+    bootstrap : Bootstrap,
     claim : ClaimJob,
     scout : ScoutJob,
     reserve : ReserveJob,
@@ -36,7 +71,8 @@ interface JobList {
     links : LinkJob,
     protector : ProtectorJob,
     tower : TowerJob,
-    loader : Loader
+    loader : LoaderJob,
+    initial: InitialRoomJob
 }
 
 interface roomDirectory {
@@ -58,7 +94,7 @@ interface subRoom {
     roomMemory : roomMemory
 }
 // can be called with just name, or with target as well
-class BootstrapJob {
+export class Bootstrap {
     _subRoomToClaimedRoom : {[key: string] : string};
     memory: any;
     execute() {
@@ -329,17 +365,18 @@ class BootstrapJob {
         });
     }
     initalizeRoom(claimedRoom : claimedRoom, claimedRoomName: string) {
+        var self = this;
         if(!claimedRoom.jobs) {
             claimedRoom.jobs = <JobList>{};
             _.forEach(global.jobClasses, function (jobClass, jobName: string) {
                 try {
                     if(jobName == 'spawn') {
                         //kind of a hacky way to deal with global non-bootstrap jobs like spawn
-                        claimedRoom.jobs[jobName] == global.spawn;
-                    } else if(jobName = 'scout') {
-                        claimedRoom.jobs[jobName] == global.scout;
+                        claimedRoom.jobs[jobName] = global.spawn;
+                    } else if(jobName == 'scout') {
+                        claimedRoom.jobs[jobName] = global.scout;
                     } else {
-                        claimedRoom.jobs[jobName] = new jobClass(jobName, claimedRoomName, claimedRoom.jobs);
+                        (<any>claimedRoom.jobs)[jobName] = new jobClass(jobName, claimedRoomName, claimedRoom.jobs);
                     }
                 } catch (e) {
                     console.log('job ' + jobName + ' had the following error on instantiation:');
@@ -347,6 +384,7 @@ class BootstrapJob {
                     debugger;
                 }
             });
+            claimedRoom.jobs.bootstrap = self;
         }
     }
     runRooms() {
@@ -506,6 +544,3 @@ class BootstrapJob {
         }
     }
 }
-
-
-module.exports = BootstrapJob;
