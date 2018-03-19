@@ -64,5 +64,9 @@ module.exports.loop = function () {
             return ary;
         }, segments);
         RawMemory.setActiveSegments(segments);
+    } catch(e) {
+        console.log('global segments setting had the following error: ');
+        console.log(e.stack);
+        debugger;
     }
 };

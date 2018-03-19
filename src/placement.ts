@@ -120,7 +120,7 @@ export class Placement {
 		}
 		self.memory.stats.push(timeTaken);
 	}
-	get memory {
+	get memory () {
 		var self = this;
 		if(!global.memory.placement) {
 			global.memory.placement = {};
