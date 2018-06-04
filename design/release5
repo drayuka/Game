@@ -1,0 +1,45 @@
+5th release
+
+THIS RELEASE:
+
+change bootstrap so that it actually splits up each room into the room and its reserved (sub) rooms and runs each room in a separate instance of the jobs that exist right now (when it makes sense) 
+
+change creeps so that they know their parent claim room.
+
+add mitosis to bootstrap so that new rooms can later become independant
+
+change logistics so that it caches paths
+
+change roomcosts so that it caches pre-creep costs, but wipes those periodically
+
+
+
+
+TEST
+
+split roomworker into roomworker and deliverer
+	-notes:
+	- need to fix roomworker to work on things that the claimed room doesn’t own
+	- room worker should no longer deliver energy but only do repair and building, should cover all the roads and walls that exist for a claimed room and it’s sub reserved/source keeper rooms
+	- room worker should be able to scavenge energy from local containers or that have been dropped.
+	-should periodically scan roads and remember roads that are about to be destroyed (and rebuild them if they become so), protector should alert roomworker to the presence of enemy creeps
+	-single roomworkers should be able to repair all of the roads in a room.
+	-roomworker structure removal, user marks with flags, system shows with room visuals.
+	-deliverer noteS:
+	-should be one-then-done delivery goals, no caching of extensions or spawns 
+	-if another job is causing these things, they should notify roomworker of it:
+		-spawn
+		-extension
+		-lab
+		-tower
+		-building (no build job, but when new building happens, alert roomworker)
+
+TEST
+
+energy donation from full terminals to rooms needing energy
+
+TEST
+
+action queues
+	- notes:
+	- develop a library of standard actions which creeps can store the actions for, they should be able to queue these actions up, specifically stuff like (“get energy from x”, “move to attack x”, “harvest x”, etc)
