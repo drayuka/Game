@@ -9,7 +9,8 @@
       "outDir": "./dist",
       "noEmitOnError": true,
       "allowUnreachableCode": true,
-      "strict": true
+      "strict": true,
+      "strictPropertyInitialization": false
     },
     "include": [
       "./src/*",
