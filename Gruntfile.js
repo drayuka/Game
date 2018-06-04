@@ -1,6 +1,8 @@
 module.exports = function(grunt) {
-
+    require('time-grunt')(grunt);
     grunt.loadNpmTasks('grunt-screeps');
+    grunt.loadNpmTasks('grunt-contrib-clean');
+    grunt.loadNpmTasks('grunt-ts'); 
     var config = require('./.screeps.json');
     grunt.initConfig({
         screeps: {
@@ -11,17 +13,22 @@ module.exports = function(grunt) {
                 ptr: config.ptr
             },
             dist: {
-                src: [
-                    'src/*.js',
-                    'node_modules/immutable/dist/immutable.min.js'
-                ],
-                cwd: 'dist/',
-                flatten: true,
-                expand: true
+                src: ['dist/*.js']
+            }
+        },
+        clean: {
+            'dist': ['dist']
+        },
+        ts: {
+            default: {
+                tsconfig: true,
+                options: {
+                    verbose: true
+                }
             }
         }
     });
 
-    grunt.registerTask('default', ['screeps'])
+    grunt.registerTask('default', ['clean','ts','screeps'])
 }
 

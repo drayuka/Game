@@ -7,9 +7,11 @@
       "noImplicitAny": true,
       "sourceMap": false,
       "outDir": "./dist",
+      "rootDir": "./src",
       "noEmitOnError": true,
       "allowUnreachableCode": true,
-      "strict": true,
+      "strictNullChecks": true,
+      "strictFunctionTypes": true,
       "strictPropertyInitialization": false
     },
     "include": [

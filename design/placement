@@ -1,9 +1,33 @@
 placement
 
+inital placement:
+	record inital placement of any pre-exisiting buildings (user intervention)
+	initalize placement of all possible buildings
+	start < 5 of the controller deciding based off of a heuristic (random to start?)
+	making sure that each point has sufficent empty space/roads to have pathing or repairability if neccesary
+	order of placement should be order of buildings gained.
+	spawns should want at least 3 empty/road spaces around themselves
+	resource buildings should want at least 1 road space around themselves
+	when it runs out of places to place buildings, add border spaces
+	should also place source containers
+
+build plan stages:
+	spawn/inital: for use with job.inital no defense, pure energy economy
+	rcl 1:
+	rcl 2:
+	rcl 3:
+	rcl 4: storage replace container
+	rcl 5: stop of job.inital, links
+	rcl 6: 2 towers, terminal, extractor
+	rcl 7:
+	rcl 8: defense (walls/ramparts, all towers)
+	final: nuker, observer, labs
+
+
 border space definition - when growing base spaces, any space which is within 1 space of a base space placed object but also pathable without going through any base or other border spaces.
 
 complete pathfinding -
-	find paths between all empty/road spaces things within 3 border spaces a base maximum size of 20x20 (or 17x17 with protection)
+	find paths between all empty/road spaces things within a base maximum size (or 17x17 with protection)
 
 	require:
 		all buildings pathable from (a) spawn (except for observer)
@@ -13,11 +37,13 @@ complete pathfinding -
 
 	minimize:
 		average path distance to extensions and spawns
-		average path distance to labs
+		average distance between labs (this should be highly penalized if it is much more than good design minimums)
+		average distance from borders to towers 
 		nuke vulnerability (clumpiness of critical infrastructure, towers, etc) quantified by the number of towers <5 from each other
-		average distance from borders (where borders are defined as any empty location not specifically in the placement) to towers
-			this allows the system to not be penalized by placing buildings near areas where enemies can’t path
-			distance from towers to controller
+		distance from towers to controller (should be low)
+		number of border spaces
+		average path distance to labs
+
 		
 
 Order of operations:
@@ -36,6 +62,9 @@ permute(base)
 		calculate cost
 		if < currentMinCost set as base
 		hash base
+	NOTE: don't permute buildings with different requirements.
 
-
-er2805652
+define border:
+	for finished placement map
+	should define and record border spaces which are the last grown spaces
+	any space which is within 3 of a non base space
