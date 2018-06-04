@@ -7,14 +7,17 @@ module.exports = function(grunt) {
             options: {
                 email: config.email,
                 password: config.password,
-                branch: 'mining',
+                branch: config.branch,
                 ptr: config.ptr
             },
             dist: {
                 src: [
-                    'dist/*.js',
-                    'node_modules/immutable/**/*.js'
-                ]
+                    'src/*.js',
+                    'node_modules/immutable/dist/immutable.min.js'
+                ],
+                cwd: 'dist/',
+                flatten: true,
+                expand: true
             }
         }
     });
