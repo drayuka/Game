@@ -1,0 +1,17 @@
+
+6th release:
+
+profiling tools (add in timing markers that are activateable by higher functions. so that they can see where their time is being used.
+
+do not parse memory every tick, but only when we hit a global clear.
+
+change spawning so that we first try to spawn in the local claimed room (per changes to bootstrap) and then try to go to other rooms
+
+build out better new room logic 
+	-notes:
+	-new room should treat the upgrade container as storage and store all mined energy there
+	-upgrading below rcl8 should involve multiple links to supply the new controller with energy as soon as available. (logistics should service energy harvesting)
+
+mining - just sell minerals for now
+
+testing on private server
