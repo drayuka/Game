@@ -19,13 +19,65 @@ type stages =
 	'rcl8'|
 	'final';
 
-interface buildPlan {
+interface BuildPlan {
 	stages?: {
 		[K in stages]: BuildList
 	}
 	total?: BuildList
-	planningStatus: 'inital'|'optimization'|'staging'|'final'
+	lowestCost?: number
+	prevHashes?: string[]
+	buildingPlacementStage?: string,
+	buildingPlacementIndex?: number,
+	buildingPlacementCount?: number
+	planningStatus: 'initial'|'opt'|'staging'|'final'
 }
+
+var buildingPlacement = { 
+	init: [
+		{STRUCTURE_SPAWN: 1},
+		{"containerasstorage": 1},
+		{"sources":0},//means all
+		{"upgrade":0}
+	],
+	rcl2: [
+		{STRUCTURE_EXTENSION: 5}
+	],
+	rcl3: [
+		{STRUCTURE_EXTENSION: 5}
+	],
+	rcl4: [
+		{STRUCTURE_EXTENSION: 10},
+		{STRUCTURE_STORAGE: 1},
+	],
+	rcl5: [
+		{STRUCTURE_EXTENSION: 10},
+		{'upgradelinks': 2},
+		{STRUCTURE_TOWER: 2}
+	],
+	rcl6: [
+		{STRUCTURE_EXTENSION: 10},
+		{STRUCTURE_TERMINAL: 1},
+		{STRUCTUTRE_EXTRACTOR: 1},
+		{"upgradelinks":1},
+	],
+	rcl7: [
+		{STRUCTURE_EXTENSION: 10},
+		{STRUCTURE_SPAWN: 1},
+		{"upgradelinks":1},
+	],
+	rcl8: [
+		{STRUCTURE_EXTENSION: 10},
+		{STRUCTURE_SPAWN: 1},
+		{"borderdefenses": 0}, //build the first border defenses, may have to move this forward
+		{STRUCTURE_TOWER: 4},
+	],
+	final: [
+		{"sourcelinks":0},//signifies that we want to delete upgrade links except for 1 and change them to source links
+		{STRUCTURE_NUKER: 1},
+		{STRUCTURE_OBSERVER: 1}
+	]
+}
+
 
 export class Placement {
 	execute () {
@@ -43,14 +95,15 @@ export class Placement {
 		if(!buildPlan) {
 			buildPlan = {
 				total: undefined,
-				planningStatus: 'inital'
+				planningStatus: 'initial',
+				buildingPlacementIndex: 0
 			}
 			self.buildPlans[self.currentRoom] = buildPlan;
 		}
 
-		if(buildPlan.planningStatus == 'inital') {
+		if(buildPlan.planningStatus == 'initial') {
 			self.runInitalPlanning(buildPlan);
-		} else if(buildPlan.planningStatus == 'optimization') {
+		} else if(buildPlan.planningStatus == 'opt') {
 			self.iterateBuildPlan(buildPlan);
 		} else if(buildPlan.planningStatus == 'staging') {
 			self.stageBuildPlan(buildPlan);
@@ -66,14 +119,14 @@ export class Placement {
 	starts at < 5 from the controller for that room
 
 	*/
-	runInitalPlanning(buildPlan: buildPlan) {
+	runInitalPlanning(buildPlan: BuildPlan) {
 		var self = this;
-		
+
 	}
-	iterateBuildPlan(buildPlan: buildPlan) {
+	iterateBuildPlan(buildPlan: BuildPlan) {
 		var self = this;
 	}
-	stageBuildPlan(buildPlan: buildPlan) {
+	stageBuildPlan(buildPlan: BuildPlan) {
 		var self = this;
 	}
 	existingStructures(roomName: string, structureType: StructureConstant) : (Structure | ConstructionSite)[] {
@@ -111,7 +164,7 @@ export class Placement {
 		}
 		self.memory.stats.push(timeTaken);
 	}
-	get buildPlans () : {[key:string] :buildPlan} {
+	get buildPlans () : {[key:string] : BuildPlan} {
 		var self = this;
 		if(!self.memory.buildPlans) {
 			self.memory.buildPlans = {};
