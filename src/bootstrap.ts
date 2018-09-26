@@ -21,10 +21,6 @@ import { TowerJob } from "./job.tower"
 import { LoaderJob } from "./job.loader"
 import { InitialRoomJob } from "./job.initial"
 
-import { GoalClass } from "./goal";
-import { JobClass } from "./job";
-import { CreepClass } from "./creep";
-
 
 interface roomMemory {
     upgrading : boolean,

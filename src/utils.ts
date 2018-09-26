@@ -39,7 +39,6 @@
 function isDistancePos(pos: distancePos | rangePos)    : pos is distancePos {
     return (typeof (<distancePos>pos).range) !== undefined;
 }
-
 export class Utils {
     /* requires that you have vision into all rooms that the positions are in
     / options - {
@@ -318,5 +317,14 @@ export class Utils {
         Memory.rooms[roomName].baseCosts.costsMatrix = costs.serialize();
         Memory.rooms[roomName].baseCosts.age = Game.time;
         return costs;
+    }
+    static assertNever(x: never) : never {
+        throw new Error('Unexpected object: ' + x);
+    }
+    static freezePos(pos: RoomPosition) : [number, number, string] {
+        return [pos.x, pos.y, pos.roomName];
+    }
+    static unfreezePos(pos: [number, number, string]) {
+        return new RoomPosition(pos[0], pos[1], pos[2]);
     }
 };
