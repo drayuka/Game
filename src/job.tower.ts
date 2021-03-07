@@ -1,4 +1,5 @@
 import { JobClass } from "./job";
+import * as _ from "lodash"
 
 interface creepRoomList {
 	[key: string]: Creep[]

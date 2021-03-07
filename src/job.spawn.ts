@@ -166,6 +166,7 @@ import { GoalClass } from "./goal";
 import { JobClass } from "./job";
 import { CreepClass } from "./creep";
 import { JobList } from "./bootstrap";
+import * as _ from "lodash"
 //this is a job for ease of use, it doesn't really make sense for spawn to have goals;
 export class SpawnJob extends JobClass {
     altSpawnRooms : {[key: string]: {[key: string] : number}};

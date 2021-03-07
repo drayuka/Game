@@ -10,6 +10,7 @@
 import { Utils as utils } from "./utils"
 import { JobClass } from "./job";
 import { CreepClass } from "./creep";
+import * as _ from "lodash"
 export class GoalClass {
     job: JobClass | undefined;
     roomName: string;

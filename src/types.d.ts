@@ -14,6 +14,7 @@ import { LoaderJob } from "./job.loader"
 import { InitialRoomJob } from "./job.initial"
 import { CreepList } from "./init"
 import { JobClass } from "./job"
+import * as _ from "lodash"
 
 declare global {
 	namespace NodeJS {
@@ -55,4 +56,5 @@ declare global {
 	interface FlagMemory {[name: string]: any}
 	interface SpawnMemory {[name: string]: any}
 	interface RoomMemory {[name: string]: any}
+	interface Memory { [key: string]: any }
 }

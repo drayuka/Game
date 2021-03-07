@@ -10,6 +10,7 @@
 import { Utils as utils } from "./utils"
 import { GoalClass } from "./goal";
 import { JobClass } from "./job";
+import * as _ from "lodash"
 
 export class CreepClass extends Creep {
     _path: RoomPosition[] | undefined;

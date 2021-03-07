@@ -15,6 +15,7 @@ import { CreepList } from "./init";
 import { JobList } from "./bootstrap";
 import { GoalClass } from "./goal";
 import { CreepClass } from "./creep";
+import * as _ from "lodash"
 
 export class JobClass {
     /*

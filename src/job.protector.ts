@@ -11,6 +11,7 @@ import { Utils as utils } from "./utils"
 import { GoalClass } from "./goal";
 import { JobClass } from "./job";
 import { CreepClass } from "./creep";
+import * as _ from "lodash"
 
 export class ProtectorJob extends JobClass {
     execute() {

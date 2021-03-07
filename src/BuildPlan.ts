@@ -1,6 +1,7 @@
 import {Utils as utils} from "./utils";
 import * as placement from "./placement";
 import {Model as Model} from "./model";
+import * as _ from "lodash"
 
 export class modelBuildPlan implements Model {
     get json() : placement.BuildPlan {

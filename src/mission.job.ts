@@ -2,6 +2,7 @@
 import { GoalClass } from "./goal";
 import { JobClass } from "./job";
 import { CreepClass } from "./creep";
+import * as _ from "lodash"
 
 export interface MissionGenerator {
     [key: string]: Function

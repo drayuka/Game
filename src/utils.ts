@@ -35,6 +35,7 @@
         noHaltingCreeps?: boolean
     }
 }
+import * as _ from "lodash"
 
 function isDistancePos(pos: distancePos | rangePos)    : pos is distancePos {
     return (typeof (<distancePos>pos).range) !== undefined;

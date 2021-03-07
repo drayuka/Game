@@ -6,7 +6,7 @@
  * var mod = require('job');
  * mod.thing == 'a thing'; // true
  */
-var utils = require('utils');
+import "utils"
 import { UpgradeJob } from "./job.upgrade";
 import { SpawnJob } from "./job.spawn";
 import { HarvestJob } from "./job.harvest"
@@ -20,6 +20,7 @@ import { ProtectorJob } from "./job.protector"
 import { TowerJob } from "./job.tower"
 import { LoaderJob } from "./job.loader"
 import { InitialRoomJob } from "./job.initial"
+import * as _ from "lodash"
 
 
 interface roomMemory {
@@ -91,7 +92,7 @@ interface subRoom {
 }
 // can be called with just name, or with target as well
 export class Bootstrap {
-    _subRoomToClaimedRoom : {[key: string] : string};
+    _subRoomToClaimedRoom : {[key: string] : string} | null;
     memory: any;
     execute() {
         var self = this;

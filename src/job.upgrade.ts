@@ -10,6 +10,7 @@ import { GoalClass } from "./goal";
 import { JobClass } from "./job";
 import { CreepClass } from "./creep";
 import { Utils as utils } from "./utils"
+import * as _ from "lodash"
 export class UpgradeJob extends JobClass {
     execute() {
         var self = this;

@@ -1,5 +1,6 @@
 import {Utils as utils} from "./utils";
 import {modelBuildPlan as buildPlan} from "./BuildPlan";
+import * as _ from "lodash"
 
 export interface location {
 	pos: [number, number, string],

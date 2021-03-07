@@ -12,6 +12,7 @@ import { GoalClass } from "./goal";
 import { JobClass } from "./job";
 import { CreepClass } from "./creep";
 import { JobList } from "./bootstrap";
+import * as _ from "lodash"
 // can be called with just name, or with target as well
 export class ScoutJob extends JobClass {
     _observers: StructureObserver[];

@@ -6,6 +6,7 @@ import { CreepClass } from "./creep";
 import { MissionJobClass } from "./mission.job"
 import { Mission } from "./mission.job"
 import { MissionGenerators } from "./mission.job"
+import * as _ from "lodash"
 
 export class InitialRoomJob extends MissionJobClass {
 	execute () {

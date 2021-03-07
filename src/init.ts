@@ -17,6 +17,7 @@ import { InitialRoomJob } from "./job.initial"
 import { GoalClass } from "./goal";
 import { JobClass } from "./job";
 import { CreepClass } from "./creep";
+import * as _ from "lodash"
 
 
 interface oldCreepList {
