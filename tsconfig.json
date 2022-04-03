@@ -7,15 +7,17 @@
       "noImplicitAny": false,
       "sourceMap": false,
       "outDir": "./dist",
-      "rootDir": "./src",
-      "noEmitOnError": true,
-      "allowUnreachableCode": true,
-      "strictNullChecks": true,
+      "rootDir": "./new",
+      "allowUnreachableCode": false,
       "strictFunctionTypes": false,
-      "strictPropertyInitialization": false
+      "strictPropertyInitialization": false,
+      "esModuleInterop": true
     },
     "include": [
-      "./src/*",
+      "./new/*",
       "./node_modules/@types/**/*.d.ts"
+    ],
+    "exclude": [
+      "./new/test.ts"
     ]
 }
